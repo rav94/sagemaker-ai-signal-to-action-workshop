@@ -8,6 +8,8 @@ if [[ ! "$version" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]; then
   exit 2
 fi
 
-"${WORKSHOP_PYTHON:-python}" src/train.py
-printf '%s\n' "$version" > artifacts/model-version.txt
-tar -czf artifacts/model.tar.gz -C artifacts complaint_classifier.joblib model-version.txt
+artifact_dir="${WORKSHOP_MODEL_DIR:-artifacts}"
+WORKSHOP_MODEL_DIR="$artifact_dir" WORKSHOP_MODEL_VERSION="$version" \
+  "${WORKSHOP_PYTHON:-python}" src/train.py
+tar -czf "$artifact_dir/model.tar.gz" -C "$artifact_dir" \
+  complaint_classifier.joblib model-version.txt

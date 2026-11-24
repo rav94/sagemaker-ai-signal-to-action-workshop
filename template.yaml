@@ -14,6 +14,23 @@ Parameters:
   InstanceType:
     Type: String
     Default: ml.m5.large
+  EnableDeploymentGuardrails:
+    Type: String
+    AllowedValues: ['true', 'false']
+    Default: 'false'
+  RollbackArtifactKey:
+    Type: String
+    Default: ''
+    Description: Model archive key used by the currently deployed release
+  RollbackLatencyThresholdUs:
+    Type: Number
+    MinValue: 1
+    Default: 1000000
+Conditions:
+  GuardedRelease: !Equals [!Ref EnableDeploymentGuardrails, 'true']
+  HasRollbackArtifact: !And
+    - !Condition GuardedRelease
+    - !Not [!Equals [!Ref RollbackArtifactKey, '']]
 Resources:
   ModelExecutionRole:
     Type: AWS::IAM::Role
@@ -33,6 +50,18 @@ Resources:
               - Effect: Allow
                 Action: s3:GetObject
                 Resource: !Sub 'arn:${AWS::Partition}:s3:::${ArtifactBucket}/${ArtifactKey}'
+              - !If
+                - HasRollbackArtifact
+                - Effect: Allow
+                  Action: s3:GetObject
+                  Resource: !Sub 'arn:${AWS::Partition}:s3:::${ArtifactBucket}/${RollbackArtifactKey}'
+                - !Ref AWS::NoValue
+              - !If
+                - GuardedRelease
+                - Effect: Allow
+                  Action: cloudwatch:DescribeAlarms
+                  Resource: !Sub 'arn:${AWS::Partition}:cloudwatch:${AWS::Region}:${AWS::AccountId}:alarm:${AWS::StackName}-candidate-model-latency'
+                - !Ref AWS::NoValue
               - Effect: Allow
                 Action: s3:ListBucket
                 Resource: !Sub 'arn:${AWS::Partition}:s3:::${ArtifactBucket}'
@@ -81,13 +110,50 @@ Resources:
           InitialVariantWeight: 1
           InstanceType: !Ref InstanceType
           ModelName: !GetAtt Model.ModelName
+  CandidateModelLatencyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: GuardedRelease
+    Properties:
+      AlarmName: !Sub '${AWS::StackName}-candidate-model-latency'
+      AlarmDescription: Candidate configuration model latency during the guarded update
+      Namespace: AWS/SageMaker
+      MetricName: ModelLatency
+      Dimensions:
+        - Name: EndpointName
+          Value: !Ref AWS::StackName
+        - Name: VariantName
+          Value: AllTraffic
+        - Name: EndpointConfigName
+          Value: !GetAtt EndpointConfig.EndpointConfigName
+      Statistic: Average
+      Period: 60
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: !Ref RollbackLatencyThresholdUs
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
   Endpoint:
     Type: AWS::SageMaker::Endpoint
     Properties:
       EndpointName: !Ref AWS::StackName
       EndpointConfigName: !GetAtt EndpointConfig.EndpointConfigName
+      DeploymentConfig: !If
+        - GuardedRelease
+        - AutoRollbackConfiguration:
+            Alarms:
+              - AlarmName: !Ref CandidateModelLatencyAlarm
+          BlueGreenUpdatePolicy:
+            TrafficRoutingConfiguration:
+              Type: ALL_AT_ONCE
+              WaitIntervalInSeconds: 300
+            TerminationWaitInSeconds: 0
+            MaximumExecutionTimeoutInSeconds: 1800
+        - !Ref AWS::NoValue
 Outputs:
   EndpointName:
     Value: !GetAtt Endpoint.EndpointName
   Logs:
     Value: !Ref EndpointLogs
+  CandidateAlarmName:
+    Condition: GuardedRelease
+    Value: !Ref CandidateModelLatencyAlarm

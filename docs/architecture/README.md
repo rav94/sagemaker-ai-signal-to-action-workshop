@@ -25,12 +25,18 @@ A SageMaker training job runs to completion and releases its compute. The provis
 
 The caller signs an `InvokeEndpoint` request to the SageMaker Runtime API. SageMaker sends it to `POST /invocations` in the serving container on port `8080`. The container loads the fitted pipeline from `/opt/ml/model` at startup. The response contains a category, score, and model version. The caller can then use the local action CLI to simulate routing or human review. The serving contract is the same whether the artifact was trained locally or on SageMaker. [Inference contract](../../specs/02-inference-contract.md) · [AWS InvokeEndpoint API](https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_runtime_InvokeEndpoint.html)
 
+## Release and content safeguards
+
+The optional [guarded update](../guardrails.md#1-protect-a-sagemaker-endpoint-update) attaches a candidate model-latency alarm to SageMaker's blue/green deployment policy. The alarm watches the new endpoint configuration and can trigger rollback to the prior fleet.
+
+The [guarded caller](../guardrails.md#2-use-bedrock-applyguardrail-in-front-of-sagemaker) calls Bedrock ApplyGuardrail before invoking the endpoint. It forwards the complaint to SageMaker when the published guardrail returns `NONE`. In this lab, every intervention or check failure stops the request.
+
 ## Stack ownership and identities
 
 | Where | What it owns or can do |
 |---|---|
 | [Assets stack](../../bootstrap.yaml) | Private S3 artifact bucket, immutable-tag ECR repository, and SageMaker training execution role. |
-| [Serving stack](../../template.yaml) | SageMaker serving execution role, endpoint log group with seven-day retention, Model, EndpointConfig, and Endpoint. |
+| [Serving stack](../../template.yaml) | SageMaker serving execution role, endpoint log group with seven-day retention, Model, EndpointConfig, and Endpoint, plus the candidate alarm when the guarded update is enabled. |
 | [Deployment script](../../scripts/deploy.sh) and [training helper](../../scripts/train-cloud.sh) | Build and publish the images, submit and wait for the training job, and pass its model archive to the serving stack. The training job is submitted through the SageMaker API. |
 | Instructor/deployer identity | Publishes assets, deploys stacks, submits and inspects jobs, and passes the SageMaker execution roles. |
 | Training execution role | SageMaker uses it to read the training data and image, write training output to S3, and publish training logs and metrics. |

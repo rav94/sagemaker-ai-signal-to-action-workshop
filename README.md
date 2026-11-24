@@ -49,6 +49,7 @@ bash scripts/deploy.sh phase1-cloud-v1 --cloud-train
 
 The script publishes two images to ECR, starts managed training, and deploys the exact S3 archive returned by the completed job. Follow the [artifact handoff checks](docs/cloud-training.md#inspect-the-handoff) and the [participant invocation lab](docs/participant-guide.md). If managed training is unavailable, the [deployment playbook](docs/deployment-demo-playbook.md#rehearse-with-local-training) also gives the local-artifact deployment path.
 
+- [Guardrails lab](docs/guardrails.md) for endpoint auto-rollback and a standalone content check before SageMaker inference.
 - [Instructor guide](docs/instructor-guide.md) for sequencing, checkpoints, and fallback.
 - [Architecture](docs/architecture/README.md) for images, storage, roles, and the request path.
 - [MLOps design](docs/mlops.md) for evaluation gates, versioning, rollout, and monitoring.
