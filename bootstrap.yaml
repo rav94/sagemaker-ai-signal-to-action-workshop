@@ -18,8 +18,60 @@ Resources:
     Properties:
       ImageTagMutability: IMMUTABLE
       EmptyOnDelete: true
+  TrainingExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: sagemaker.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: TrainWorkshopModel
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: s3:ListBucket
+                Resource: !GetAtt ArtifactBucket.Arn
+              - Effect: Allow
+                Action: s3:GetObject
+                Resource: !Sub '${ArtifactBucket.Arn}/training-data/*'
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:AbortMultipartUpload
+                Resource: !Sub '${ArtifactBucket.Arn}/training-output/*'
+              - Effect: Allow
+                Action: ecr:GetAuthorizationToken
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:BatchGetImage
+                  - ecr:GetDownloadUrlForLayer
+                Resource: !GetAtt ImageRepository.Arn
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:DescribeLogStreams
+                  - logs:PutLogEvents
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/sagemaker/TrainingJobs'
+                  - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/sagemaker/TrainingJobs:*'
+              - Effect: Allow
+                Action: cloudwatch:PutMetricData
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    cloudwatch:namespace: /aws/sagemaker/TrainingJobs
 Outputs:
   ArtifactBucket:
     Value: !Ref ArtifactBucket
   ImageRepositoryUri:
     Value: !GetAtt ImageRepository.RepositoryUri
+  TrainingRoleArn:
+    Value: !GetAtt TrainingExecutionRole.Arn

@@ -2,3 +2,4 @@
 !requirements.txt
 !src/
 !src/serve.py
+!src/train.py

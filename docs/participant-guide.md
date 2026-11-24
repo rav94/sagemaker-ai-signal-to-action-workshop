@@ -2,7 +2,11 @@
 
 Use the existing synthetic fixtures. Your instructor will share the endpoint name, region, and invocation access. If the class is running locally, follow the README and use the same request files.
 
-## 1. Get an insight
+## 1. Trace the training artifact
+
+Follow the [managed training lab](cloud-training.md) using the instructor’s shared job name. Find the dataset URI, the training job status, and the output model URI. Match that output to the model attached to the endpoint. If your role only allows invocation, follow along as the instructor runs the inspection commands.
+
+## 2. Get an insight
 
 ```bash
 mkdir -p artifacts
@@ -15,7 +19,7 @@ cat artifacts/insight.json
 
 Find the category, score, and deployed version. Repeat with `events/complaint-ambiguous.json`. Which labels could a human reasonably choose for that complaint?
 
-## 2. Decide how to act
+## 3. Decide how to act
 
 ```bash
 python src/action.py artifacts/insight.json --minimum-score 0.35
@@ -24,7 +28,7 @@ python src/action.py artifacts/insight.json --minimum-score 0.60
 
 Use the billing fixture to observe a decision change between these thresholds. Then try the ambiguous fixture. Discuss how many more manual reviews a higher threshold might create and what labeled cases you would need to choose a threshold.
 
-## 3. Inspect a rejected signal
+## 4. Inspect a rejected signal
 
 Replace the invoke fixture with `events/complaint-invalid.json` and use `artifacts/rejected.json` as a separate output path. Inspect the error and explain why the action stage requires a valid insight. For the local lab, repeat the README curl request with that fixture and `-i` to see the container status.
 

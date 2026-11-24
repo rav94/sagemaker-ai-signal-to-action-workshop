@@ -1,6 +1,6 @@
 # SageMaker AI Signal → Insight → Action Workshop
 
-Deploy the Phase 1 complaint classifier as an IAM-authenticated SageMaker AI real-time endpoint. The lab uses the original synthetic complaint dataset and fitted TF-IDF plus logistic regression pipeline. It is the SageMaker companion to the [Bedrock workshop](https://github.com/Emojot-Inc/ai-signal-insight-action-workshop).
+Train and deploy the Phase 1 complaint classifier as an IAM-authenticated SageMaker AI real-time endpoint. The lab uses the original synthetic complaint dataset and fitted TF-IDF plus logistic regression pipeline. It is the SageMaker companion to the [Bedrock workshop](https://github.com/Emojot-Inc/ai-signal-insight-action-workshop).
 
 | Step | What happens |
 |---|---|
@@ -15,9 +15,9 @@ The current workshop lab runs the three stages from the CLI. The [architecture d
 Use Python 3.13 and install the training and serving dependencies from the same requirements file.
 
 ```bash
-python3.13 -m venv .venv
+uv venv --python 3.13
 source .venv/bin/activate
-python -m pip install -r requirements.txt
+uv pip install -r requirements.txt
 bash scripts/package-model.sh phase1-v1
 python src/predict.py "The app freezes whenever I open my account"
 python src/serve.py serve --bind 127.0.0.1 --model-dir artifacts
@@ -31,6 +31,10 @@ curl --fail-with-body -sS -H 'Content-Type: application/json' \
   -o artifacts/insight.json
 python src/action.py artifacts/insight.json --minimum-score 0.40
 ```
+
+## Train and deploy on SageMaker
+
+After the local exercise, run the [managed training lab](docs/cloud-training.md). The same training code runs on a SageMaker CPU training job. The deployment script takes the archive produced by that job and uses it for the real-time endpoint.
 
 - [Participant lab](docs/participant-guide.md)
 - [Instructor guide](docs/instructor-guide.md)
