@@ -32,7 +32,7 @@ aws logs tail /aws/sagemaker/TrainingJobs \
 After the endpoint reaches `InService`, read the artifact configured on its model:
 
 ```bash
-endpoint="${WORKSHOP_STACK:-moratuwa-complaint-sagemaker}"
+endpoint="${WORKSHOP_STACK:-sagemaker-ai-signal-insight-action-workshop}"
 config=$(aws sagemaker describe-endpoint --endpoint-name "$endpoint" \
   --query EndpointConfigName --output text)
 model=$(aws sagemaker describe-endpoint-config --endpoint-config-name "$config" \

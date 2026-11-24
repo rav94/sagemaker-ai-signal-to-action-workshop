@@ -14,9 +14,9 @@ fi
 : "${WORKSHOP_ACCOUNT_ID:?Set WORKSHOP_ACCOUNT_ID to the approved teaching account ID}"
 export AWS_PAGER=""
 
-stack="${WORKSHOP_STACK:-moratuwa-complaint-sagemaker}"
+stack="${WORKSHOP_STACK:-sagemaker-ai-signal-insight-action-workshop}"
 storage_stack="${stack}-assets"
-instance_type="${WORKSHOP_INSTANCE_TYPE:-ml.m5.large}"
+instance_type="${WORKSHOP_INSTANCE_TYPE:-ml.t2.medium}"
 
 if [[ ! "$version" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,120}$ ]]; then
   echo "Use a release version of at most 121 letters, digits, dots, underscores or hyphens, starting with a letter or digit." >&2

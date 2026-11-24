@@ -10,7 +10,7 @@ Follow the [managed training lab](cloud-training.md) using the instructor’s sh
 
 ```bash
 mkdir -p artifacts
-endpoint="${WORKSHOP_STACK:-moratuwa-complaint-sagemaker}"
+endpoint="${WORKSHOP_STACK:-sagemaker-ai-signal-insight-action-workshop}"
 aws sagemaker-runtime invoke-endpoint \
   --endpoint-name "$endpoint" \
   --content-type application/json \

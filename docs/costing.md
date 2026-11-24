@@ -17,7 +17,7 @@ Record the region and the pricing date for your estimate. [SageMaker AI pricing]
 Use the same approved profile and region as deployment. Check the account with STS before deleting resources.
 
 ```bash
-stack="${WORKSHOP_STACK:-moratuwa-complaint-sagemaker}"
+stack="${WORKSHOP_STACK:-sagemaker-ai-signal-insight-action-workshop}"
 aws sts get-caller-identity
 aws cloudformation delete-stack --stack-name "$stack"
 aws cloudformation wait stack-delete-complete --stack-name "$stack"
