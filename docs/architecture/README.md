@@ -6,7 +6,7 @@
 
 [Editable Draw.io source](serving.drawio) · [Open the overview PNG](training-to-endpoint.png)
 
-The deployment script builds two Linux AMD64 images from the same Dockerfile. Its `training` target packages `src/train.py` and its `serving` target packages `src/serve.py`. They share a Python base and pinned packages. Both images are pushed to the workshop ECR repository and referenced by digest.
+The deployment script builds two Linux AMD64 images from the same Dockerfile. Its `training` target packages `src/train.py` and its `serving` target packages `src/serve.py`. They share a Python base and pinned packages. The managed path publishes tags `train-<release>` and `serve-<release>` to the workshop ECR repository. The training job and serving stack reference the respective image digests. Both enable network isolation.
 
 | Stage | Inputs | Output |
 |---|---|---|
@@ -23,14 +23,14 @@ A SageMaker training job runs to completion and releases its compute. The provis
 
 [Open the request flow PNG](inference-request.png)
 
-The caller signs an `InvokeEndpoint` request. SageMaker forwards it to the serving container, which loads the fitted pipeline from `/opt/ml/model` at startup. The response contains a category, score, and model version. The caller can then use the local action CLI to simulate routing or human review. The serving contract is the same whether the artifact was trained locally or on SageMaker. [Inference contract](../../specs/02-inference-contract.md) · [AWS InvokeEndpoint API](https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_runtime_InvokeEndpoint.html)
+The caller signs an `InvokeEndpoint` request to the SageMaker Runtime API. SageMaker sends it to `POST /invocations` in the serving container on port `8080`. The container loads the fitted pipeline from `/opt/ml/model` at startup. The response contains a category, score, and model version. The caller can then use the local action CLI to simulate routing or human review. The serving contract is the same whether the artifact was trained locally or on SageMaker. [Inference contract](../../specs/02-inference-contract.md) · [AWS InvokeEndpoint API](https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_runtime_InvokeEndpoint.html)
 
 ## Stack ownership and identities
 
 | Where | What it owns or can do |
 |---|---|
 | [Assets stack](../../bootstrap.yaml) | Private S3 artifact bucket, immutable-tag ECR repository, and SageMaker training execution role. |
-| [Serving stack](../../template.yaml) | SageMaker serving execution role, endpoint log group, Model, EndpointConfig, and Endpoint. |
+| [Serving stack](../../template.yaml) | SageMaker serving execution role, endpoint log group with seven-day retention, Model, EndpointConfig, and Endpoint. |
 | [Deployment script](../../scripts/deploy.sh) and [training helper](../../scripts/train-cloud.sh) | Build and publish the images, submit and wait for the training job, and pass its model archive to the serving stack. The training job is submitted through the SageMaker API. |
 | Instructor/deployer identity | Publishes assets, deploys stacks, submits and inspects jobs, and passes the SageMaker execution roles. |
 | Training execution role | SageMaker uses it to read the training data and image, write training output to S3, and publish training logs and metrics. |

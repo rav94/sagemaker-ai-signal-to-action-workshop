@@ -37,10 +37,18 @@ config=$(aws sagemaker describe-endpoint --endpoint-name "$endpoint" \
   --query EndpointConfigName --output text)
 model=$(aws sagemaker describe-endpoint-config --endpoint-config-name "$config" \
   --query 'ProductionVariants[0].ModelName' --output text)
-aws sagemaker describe-model --model-name "$model" \
-  --query PrimaryContainer.ModelDataUrl --output text
+trained_artifact=$(aws sagemaker describe-training-job --training-job-name "$job" \
+  --query ModelArtifacts.S3ModelArtifacts --output text)
+deployed_artifact=$(aws sagemaker describe-model --model-name "$model" \
+  --query PrimaryContainer.ModelDataUrl --output text)
+printf 'Training job: %s\nServing model: %s\n' "$trained_artifact" "$deployed_artifact"
+if [[ "$trained_artifact" == s3://* && "$trained_artifact" == "$deployed_artifact" ]]; then
+  printf 'Artifact handoff verified.\n'
+else
+  printf 'Artifact handoff failed. Check the job, endpoint, and AWS profile.\n' >&2
+fi
 ```
 
-Match the URI against the completed training job’s `Model` output, then invoke the endpoint using the [participant lab](participant-guide.md). For the example release, check that the response contains `"modelVersion": "phase1-cloud-v1"`.
+Look for `Artifact handoff verified.` Then invoke the endpoint using the [participant lab](participant-guide.md). For the example release, check that the response contains `"modelVersion": "phase1-cloud-v1"`.
 
 If the job is still provisioning during the workshop, show its status and use the completed rehearsal job and endpoint for the remainder of the exercise. With the tiny dataset, the lifecycle is more useful to teach than the compute time.

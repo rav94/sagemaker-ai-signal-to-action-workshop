@@ -5,11 +5,13 @@ The cloud-training mode runs the existing TF-IDF and logistic regression pipelin
 | Contract | Expected value |
 |---|---|
 | Training image | Docker `training` target for Linux AMD64, published to ECR and selected by digest. |
-| Data channel | `train` in File mode, sourced from the checksum-addressed CSV in the workshop bucket. |
+| Data channel | `train` in File mode, with input at `training-data/<csv-sha256>/complaints.csv` in the workshop bucket. |
 | Container input | `/opt/ml/input/data/train/complaints.csv` |
 | Container output | `/opt/ml/model/complaint_classifier.joblib` and `/opt/ml/model/model-version.txt` |
 | Job output | SageMaker writes the archive under the workshop bucket's `training-output/` prefix. |
-| Model version | The release version passed into the training job and returned by inference. |
+| Model version | Deployment sets `WORKSHOP_MODEL_VERSION` for the training job. The container writes it to the model archive and serving returns it as `modelVersion`. |
+| Compute | One training instance, default `ml.m5.large`, with a runtime limit of 900 seconds. `WORKSHOP_TRAINING_INSTANCE_TYPE` can override the type. |
+| Evaluation | Standard output contains the report for a stratified 48/16 split on the checked-in CSV. The live lab gates deployment on job completion. See the [MLOps design](../docs/mlops.md) for a proposed quality gate. |
 
 ## Acceptance criteria
 

@@ -1,6 +1,6 @@
 # Participant lab
 
-Use the existing synthetic fixtures. Your instructor will share the endpoint name, region, and invocation access. If the class is running locally, follow the README and use the same request files.
+Use the existing synthetic fixtures. Your instructor will share the endpoint name, region, and invocation access. For a local session, use the [README quick start](../README.md#run-the-local-lab) and the same request fixtures.
 
 ## 1. Trace the training artifact
 
@@ -10,11 +10,12 @@ Follow the [managed training lab](cloud-training.md) using the instructor’s sh
 
 ```bash
 mkdir -p artifacts
+endpoint="${WORKSHOP_STACK:-moratuwa-complaint-sagemaker}"
 aws sagemaker-runtime invoke-endpoint \
-  --endpoint-name "${WORKSHOP_STACK:-moratuwa-complaint-sagemaker}" \
+  --endpoint-name "$endpoint" \
   --content-type application/json \
-  --body fileb://events/complaint.json artifacts/insight.json
-cat artifacts/insight.json
+  --body fileb://events/complaint.json artifacts/aws-billing-insight.json &&
+  cat artifacts/aws-billing-insight.json
 ```
 
 Find the category, score, and deployed version. Check that `modelVersion` matches the release your instructor deployed. Keep the billing result for the threshold exercise.
@@ -22,14 +23,23 @@ Find the category, score, and deployed version. Check that `modelVersion` matche
 ## 3. Decide how to act
 
 ```bash
-python src/action.py artifacts/insight.json --minimum-score 0.35
-python src/action.py artifacts/insight.json --minimum-score 0.60
+python src/action.py artifacts/aws-billing-insight.json --minimum-score 0.35
+python src/action.py artifacts/aws-billing-insight.json --minimum-score 0.60
 ```
 
-Use the billing fixture to observe a decision change between these thresholds. Then invoke with `events/complaint-ambiguous.json` and save that result separately. Which labels could a human reasonably choose for it? Discuss how many more manual reviews a higher threshold might create and what labeled cases you would need to choose a threshold.
+Continue with this file after the invoke command succeeds. The billing fixture should route to `billing` at `0.35` and go to `manual_review` at `0.60`. Then invoke with `events/complaint-ambiguous.json` and save that result separately. Which labels could a human reasonably choose for it? Discuss how many more manual reviews a higher threshold might create and what labeled cases you would need to choose a threshold.
 
 ## 4. Inspect a rejected signal
 
-Replace the invoke fixture with `events/complaint-invalid.json` and use `artifacts/rejected.json` as a separate output path. Inspect the error and explain why the action stage requires a valid insight. For the local lab, repeat the README curl request with that fixture and `-i` to see the container status.
+Send the malformed fixture in a separate invocation:
+
+```bash
+aws sagemaker-runtime invoke-endpoint \
+  --endpoint-name "$endpoint" \
+  --content-type application/json \
+  --body fileb://events/complaint-invalid.json artifacts/aws-rejected.json
+```
+
+Expect the command to fail with `ModelError`. The container returned HTTP 400. The AWS service wraps that as HTTP 424 and includes the original status in the error details. For the local lab, send the same fixture with `curl -i` to see the container status directly. [AWS InvokeEndpoint errors](https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_runtime_InvokeEndpoint.html#API_runtime_InvokeEndpoint_Errors)
 
 If a shared endpoint is unavailable, use the local serving process or run the action exercise on `events/insight-example.json`. That example is a supplied fixture.
