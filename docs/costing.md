@@ -1,12 +1,18 @@
 # Workshop cost and cleanup
 
-Budget one `ml.m5.large` real-time instance in the selected region, or substitute the approved CPU instance. Record the dated regional serving rate before deployment. A four-hour rehearsal window plus a two-hour class with the endpoint present throughout is roughly six instance-hours. Use the actual hosting duration for the final estimate, including idle time. Add the actual billed duration and regional rate for the separate SageMaker training instance. The training job uses one CPU instance and has a 15-minute runtime limit. Add S3 storage and requests, ECR storage for the training and serving images, and CloudWatch Logs ingestion and retention. Student CLI invocations share the single teaching endpoint.
+Budget one shared SageMaker CPU training job and one shared real-time endpoint. Both default to `ml.m5.large`, with independent quota and instance settings.
 
-[SageMaker AI pricing](https://aws.amazon.com/sagemaker/ai/pricing/) · [S3 pricing](https://aws.amazon.com/s3/pricing/) · [ECR pricing](https://aws.amazon.com/ecr/pricing/) · [CloudWatch pricing](https://aws.amazon.com/cloudwatch/pricing/)
+| Cost item | How to estimate it |
+|---|---|
+| **Training job** | Use the regional training rate and the job's actual billed duration. The job has a 15-minute runtime limit and releases its training compute when it finishes. A local-artifact run skips the AWS training job. |
+| **Real-time endpoint** | Use the regional inference rate and the time the endpoint stays provisioned, including idle time. A four-hour rehearsal window plus a two-hour class with the endpoint present throughout is roughly six instance-hours. |
+| **S3, ECR, CloudWatch** | Include CSV and model archive storage and requests, storage for the training and serving images, and training and serving log ingestion and retention. |
+
+Record the region and the pricing date for your estimate. [SageMaker AI pricing](https://aws.amazon.com/sagemaker/ai/pricing/) · [S3 pricing](https://aws.amazon.com/s3/pricing/) · [ECR pricing](https://aws.amazon.com/ecr/pricing/) · [CloudWatch pricing](https://aws.amazon.com/cloudwatch/pricing/)
 
 ## Delete after the final invocation
 
-Use the same approved profile and region as deployment. Check the account with STS before running deletion commands.
+Use the same approved profile and region as deployment. Check the account with STS before deleting resources.
 
 ```bash
 stack="${WORKSHOP_STACK:-moratuwa-complaint-sagemaker}"
@@ -17,4 +23,14 @@ aws sagemaker list-endpoints --name-contains "$stack" \
   --query "Endpoints[?EndpointName=='$stack']"
 ```
 
-After verifying the result is empty and any training job has reached a terminal state, look up `ArtifactBucket` in the `<endpoint-stack>-assets` stack. Confirm that it is the workshop-only bucket. Empty that bucket with `aws s3 rm s3://<workshop-bucket> --recursive`, then delete the assets stack and wait for it to finish. CloudFormation removes the workshop ECR repository and its images. The shared SageMaker training log group is outside these stacks. Follow the account’s log retention policy for it.
+Verify that the endpoint query returns an empty result and that the workshop training job has reached a terminal state. If you interrupted the deploy script, check the job by its printed name before deleting the assets.
+
+Find the bucket output for the assets stack:
+
+```bash
+aws cloudformation describe-stacks --stack-name "${stack}-assets" \
+  --query "Stacks[0].Outputs[?OutputKey=='ArtifactBucket'].OutputValue | [0]" \
+  --output text
+```
+
+Confirm it is the dedicated workshop bucket. Empty it with `aws s3 rm s3://<workshop-bucket> --recursive`, then delete the `<endpoint-stack>-assets` stack and wait for deletion to complete. CloudFormation removes the workshop ECR repository and its images. The shared SageMaker training log group is outside these stacks and follows the account's log retention policy.

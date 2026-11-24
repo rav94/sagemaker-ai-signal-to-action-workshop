@@ -17,7 +17,7 @@ aws sagemaker-runtime invoke-endpoint \
 cat artifacts/insight.json
 ```
 
-Find the category, score, and deployed version. Repeat with `events/complaint-ambiguous.json`. Which labels could a human reasonably choose for that complaint?
+Find the category, score, and deployed version. Check that `modelVersion` matches the release your instructor deployed. Keep the billing result for the threshold exercise.
 
 ## 3. Decide how to act
 
@@ -26,7 +26,7 @@ python src/action.py artifacts/insight.json --minimum-score 0.35
 python src/action.py artifacts/insight.json --minimum-score 0.60
 ```
 
-Use the billing fixture to observe a decision change between these thresholds. Then try the ambiguous fixture. Discuss how many more manual reviews a higher threshold might create and what labeled cases you would need to choose a threshold.
+Use the billing fixture to observe a decision change between these thresholds. Then invoke with `events/complaint-ambiguous.json` and save that result separately. Which labels could a human reasonably choose for it? Discuss how many more manual reviews a higher threshold might create and what labeled cases you would need to choose a threshold.
 
 ## 4. Inspect a rejected signal
 

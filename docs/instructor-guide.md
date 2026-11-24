@@ -6,13 +6,13 @@
 - Rehearse managed training and save a completed job ID, evaluation output, and its S3 model URI.
 - Deploy one shared endpoint and check that it is `InService`. Run the normal, ambiguous, and malformed fixtures using the participant identity.
 - Save a normal response and a rejected invocation for fallback. Verify the local README path.
-- Open the serving diagram, a CloudWatch endpoint metrics view, and the Bedrock companion repo.
+- Open the [training and inference diagrams](architecture/README.md), the training job logs, endpoint metrics, and the Bedrock companion repo.
 
 ## SageMaker teaching sequence
 
 1. Show the training split and the fitted preprocessing inside the pipeline. The dataset contains 48 training and 16 test examples with the checked-in split. Ask what four test cases per class can tell you.
-2. Show the [managed training job](cloud-training.md), its input and output in S3, and the matching artifact configured on the endpoint. Start the job ahead of the live invocation block.
-3. Trace image, artifact, IAM role, model, endpoint config, and endpoint. Invoke with a valid case. Let pairs vary the review threshold and discuss score calibration and operational capacity.
+2. In the [managed training lab](cloud-training.md), show the two Docker targets, the job input in S3, and the evaluation report in CloudWatch. Start the shared job before the live invocation block. When it completes, match its output URI to the model attached to the endpoint.
+3. Trace the serving image and model archive through the serving execution role, Model, EndpointConfig, and Endpoint. Invoke with a valid case. Let pairs vary the review threshold and discuss score calibration and operational capacity.
 4. Send a malformed case. Contrast the Runtime error from SageMaker with the container HTTP status and explain why there is no action.
 5. Walk through the [MLOps release design](mlops.md). Ask what would trigger rollback if latency stays healthy while real complaint classification worsens.
 6. Give the same complaint text to the existing Bedrock workflow. Compare a category score with generated analysis and compare a schema error with a guardrail intervention.

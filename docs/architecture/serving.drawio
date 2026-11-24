@@ -1,20 +1,157 @@
-<mxfile host="app.diagrams.net">
-  <diagram name="SageMaker serving" id="serving">
-    <mxGraphModel dx="1100" dy="570" grid="1" page="1" pageWidth="1100" pageHeight="600">
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="app.diagrams.net" pages="2">
+  <diagram name="Managed training to real-time deployment" id="training-to-endpoint">
+    <mxGraphModel dx="1380" dy="650" grid="1" page="1" pageWidth="1260" pageHeight="588">
       <root>
-        <mxCell id="0"/>
-        <mxCell id="1" parent="0"/>
-        <mxCell id="signal" value="Signal&#xa;Complaint JSON" style="rounded=1;whiteSpace=wrap;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="60" y="100" width="180" height="75" as="geometry"/></mxCell>
-        <mxCell id="endpoint" value="Insight&#xa;SageMaker real-time endpoint&#xa;TF-IDF + logistic regression" style="rounded=1;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1"><mxGeometry x="365" y="100" width="260" height="75" as="geometry"/></mxCell>
-        <mxCell id="action" value="Action&#xa;CLI routing policy&#xa;Category queue or human review" style="rounded=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1"><mxGeometry x="755" y="100" width="235" height="75" as="geometry"/></mxCell>
-        <mxCell id="ecr" value="Amazon ECR&#xa;Serving image digest" style="rounded=1;whiteSpace=wrap;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1"><mxGeometry x="230" y="280" width="180" height="65" as="geometry"/></mxCell>
-        <mxCell id="s3" value="Amazon S3&#xa;Model archive" style="rounded=1;whiteSpace=wrap;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1"><mxGeometry x="450" y="280" width="180" height="65" as="geometry"/></mxCell>
-        <mxCell id="logs" value="CloudWatch&#xa;Endpoint logs and metrics" style="rounded=1;whiteSpace=wrap;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1"><mxGeometry x="670" y="280" width="190" height="65" as="geometry"/></mxCell>
-        <mxCell id="e1" value="InvokeEndpoint" style="endArrow=block;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="signal" target="endpoint"><mxGeometry relative="1" as="geometry"/></mxCell>
-        <mxCell id="e2" value="Category + score" style="endArrow=block;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="endpoint" target="action"><mxGeometry relative="1" as="geometry"/></mxCell>
-        <mxCell id="e3" style="endArrow=block;dashed=1;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="ecr" target="endpoint"><mxGeometry relative="1" as="geometry"/></mxCell>
-        <mxCell id="e4" style="endArrow=block;dashed=1;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="s3" target="endpoint"><mxGeometry relative="1" as="geometry"/></mxCell>
-        <mxCell id="e5" style="endArrow=block;dashed=1;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="endpoint" target="logs"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="Managed training to real-time deployment" style="text;align=left;verticalAlign=middle;fontSize=29;fontColor=#142437;fontStyle=1;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="45" y="19" width="1160" height="34" />
+        </mxCell>
+        <mxCell id="subtitle" value="Two image targets, one model archive passed from the training job to the endpoint" style="text;align=left;verticalAlign=middle;fontSize=16;fontColor=#51647a;fontStyle=0;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="45" y="57" width="1160" height="22" />
+        </mxCell>
+        <mxCell id="note" value="Training compute is released after the job. Endpoint compute remains provisioned for requests until teardown." style="text;align=left;verticalAlign=middle;fontSize=15;fontColor=#51647a;fontStyle=0;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="45" y="546" width="1160" height="24" />
+        </mxCell>
+        <mxCell id="edge-0" value="" style="endArrow=block;endFill=1;strokeWidth=2;strokeColor=#52667b;exitX=1;exitY=0.5;entryX=0;entryY=0.5;dashed=0;labelBackgroundColor=#ffffff;fontColor=#34495e;" edge="1" parent="1" source="data" target="train">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="label-0" value="File mode" style="text;align=center;verticalAlign=middle;fontSize=13;fontColor=#34495e;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="267.0" y="244" width="74" height="18" />
+        </mxCell>
+        <mxCell id="edge-1" value="" style="endArrow=block;endFill=1;strokeWidth=2;strokeColor=#52667b;exitX=1;exitY=0.5;entryX=0;entryY=0.5;dashed=0;labelBackgroundColor=#ffffff;fontColor=#34495e;" edge="1" parent="1" source="train" target="archive">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="label-1" value="Job output" style="text;align=center;verticalAlign=middle;fontSize=13;fontColor=#34495e;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="587.0" y="244" width="74" height="18" />
+        </mxCell>
+        <mxCell id="edge-2" value="" style="endArrow=block;endFill=1;strokeWidth=2;strokeColor=#52667b;exitX=1;exitY=0.5;entryX=0;entryY=0.5;dashed=0;labelBackgroundColor=#ffffff;fontColor=#34495e;" edge="1" parent="1" source="archive" target="endpoint">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="label-2" value="Artifact URI" style="text;align=center;verticalAlign=middle;fontSize=13;fontColor=#34495e;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="897.0" y="244" width="84" height="18" />
+        </mxCell>
+        <mxCell id="edge-3" value="" style="endArrow=block;endFill=1;strokeWidth=2;strokeColor=#52667b;exitX=0.5;exitY=1;entryX=0.5;entryY=0;dashed=0;labelBackgroundColor=#ffffff;fontColor=#34495e;" edge="1" parent="1" source="ecr-training" target="train">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="edge-4" value="" style="endArrow=block;endFill=1;strokeWidth=2;strokeColor=#52667b;exitX=0.5;exitY=1;entryX=0.5;entryY=0;dashed=0;labelBackgroundColor=#ffffff;fontColor=#34495e;" edge="1" parent="1" source="ecr-serving" target="endpoint">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="edge-5" value="" style="endArrow=block;endFill=1;strokeWidth=2;strokeColor=#52667b;exitX=0.5;exitY=1;entryX=0.5;entryY=0;dashed=0;labelBackgroundColor=#ffffff;fontColor=#34495e;" edge="1" parent="1" source="train" target="training-logs">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="edge-6" value="" style="endArrow=block;endFill=1;strokeWidth=2;strokeColor=#52667b;exitX=0.5;exitY=0;entryX=0.5;entryY=1;dashed=1;labelBackgroundColor=#ffffff;fontColor=#34495e;" edge="1" parent="1" source="local" target="archive">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="label-6" value="Fallback upload" style="text;align=center;verticalAlign=middle;fontSize=13;fontColor=#34495e;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="791.5" y="347" width="105" height="18" />
+        </mxCell>
+        <mxCell id="edge-7" value="" style="endArrow=block;endFill=1;strokeWidth=2;strokeColor=#52667b;exitX=0.5;exitY=1;entryX=0.5;entryY=0;dashed=0;labelBackgroundColor=#ffffff;fontColor=#34495e;" edge="1" parent="1" source="endpoint" target="serving-logs">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="data" value="&lt;b&gt;S3 training data&lt;/b&gt;&lt;br&gt;complaints.csv&lt;br&gt;Checksum-addressed input" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=#eaf2ff;strokeColor=#426ca4;strokeWidth=1.5;fontColor=#26384d;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="45" y="228" width="213" height="88" />
+        </mxCell>
+        <mxCell id="train" value="&lt;b&gt;SageMaker training job&lt;/b&gt;&lt;br&gt;Runs train.py on one CPU instance&lt;br&gt;Writes files to /opt/ml/model" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=#e6f4ef;strokeColor=#327d67;strokeWidth=1.5;fontColor=#26384d;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="350" y="228" width="228" height="88" />
+        </mxCell>
+        <mxCell id="archive" value="&lt;b&gt;S3 model archive&lt;/b&gt;&lt;br&gt;model.tar.gz&lt;br&gt;Fitted pipeline and version" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=#eaf2ff;strokeColor=#426ca4;strokeWidth=1.5;fontColor=#26384d;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="670" y="228" width="223" height="88" />
+        </mxCell>
+        <mxCell id="endpoint" value="&lt;b&gt;SageMaker endpoint&lt;/b&gt;&lt;br&gt;Real-time inference via serve.py&lt;br&gt;Loads the model archive" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=#eaf0ff;strokeColor=#566caf;strokeWidth=1.5;fontColor=#26384d;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="985" y="228" width="231" height="88" />
+        </mxCell>
+        <mxCell id="ecr-training" value="&lt;b&gt;ECR training image&lt;/b&gt;&lt;br&gt;Docker target: training" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=#f4f6f9;strokeColor=#66758b;strokeWidth=1.5;fontColor=#26384d;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="350" y="100" width="228" height="72" />
+        </mxCell>
+        <mxCell id="ecr-serving" value="&lt;b&gt;ECR serving image&lt;/b&gt;&lt;br&gt;Docker target: serving" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=#f4f6f9;strokeColor=#66758b;strokeWidth=1.5;fontColor=#26384d;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="985" y="100" width="231" height="72" />
+        </mxCell>
+        <mxCell id="training-logs" value="&lt;b&gt;CloudWatch training logs&lt;/b&gt;&lt;br&gt;Evaluation report and job output" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=#f4f6f9;strokeColor=#66758b;strokeWidth=1.5;fontColor=#26384d;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="350" y="408" width="228" height="72" />
+        </mxCell>
+        <mxCell id="local" value="&lt;b&gt;Local training fallback&lt;/b&gt;&lt;br&gt;package-model.sh" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=#f4f6f9;strokeColor=#66758b;strokeWidth=1.5;fontColor=#26384d;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="670" y="408" width="223" height="72" />
+        </mxCell>
+        <mxCell id="serving-logs" value="&lt;b&gt;CloudWatch endpoint logs&lt;/b&gt;&lt;br&gt;Serving logs and metrics" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=#f4f6f9;strokeColor=#66758b;strokeWidth=1.5;fontColor=#26384d;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="985" y="408" width="231" height="72" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram name="Inference request and routing" id="inference-request">
+    <mxGraphModel dx="1380" dy="650" grid="1" page="1" pageWidth="1260" pageHeight="544">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="Inference request and routing" style="text;align=left;verticalAlign=middle;fontSize=29;fontColor=#142437;fontStyle=1;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="45" y="19" width="1160" height="34" />
+        </mxCell>
+        <mxCell id="subtitle" value="Signal → Insight → Action using the same model package contract on either training path" style="text;align=left;verticalAlign=middle;fontSize=16;fontColor=#51647a;fontStyle=0;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="45" y="57" width="1160" height="22" />
+        </mxCell>
+        <mxCell id="note" value="The endpoint classifies the complaint. The CLI uses the returned score and its own routing policy." style="text;align=left;verticalAlign=middle;fontSize=15;fontColor=#51647a;fontStyle=0;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="45" y="502" width="1160" height="24" />
+        </mxCell>
+        <mxCell id="edge-0" value="" style="endArrow=block;endFill=1;strokeWidth=2;strokeColor=#52667b;exitX=1;exitY=0.5;entryX=0;entryY=0.5;dashed=0;labelBackgroundColor=#ffffff;fontColor=#34495e;" edge="1" parent="1" source="signal" target="endpoint">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="label-0" value="Signed invoke" style="text;align=center;verticalAlign=middle;fontSize=13;fontColor=#34495e;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="251.5" y="238" width="91" height="18" />
+        </mxCell>
+        <mxCell id="edge-1" value="" style="endArrow=block;endFill=1;strokeWidth=2;strokeColor=#52667b;exitX=1;exitY=0.5;entryX=0;entryY=0.5;dashed=0;labelBackgroundColor=#ffffff;fontColor=#34495e;" edge="1" parent="1" source="endpoint" target="insight">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="label-1" value="Response" style="text;align=center;verticalAlign=middle;fontSize=13;fontColor=#34495e;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="626.0" y="238" width="74" height="18" />
+        </mxCell>
+        <mxCell id="edge-2" value="" style="endArrow=block;endFill=1;strokeWidth=2;strokeColor=#52667b;exitX=1;exitY=0.5;entryX=0;entryY=0.5;dashed=0;labelBackgroundColor=#ffffff;fontColor=#34495e;" edge="1" parent="1" source="insight" target="action">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="label-2" value="JSON" style="text;align=center;verticalAlign=middle;fontSize=13;fontColor=#34495e;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="937.0" y="238" width="74" height="18" />
+        </mxCell>
+        <mxCell id="edge-3" value="" style="endArrow=block;endFill=1;strokeWidth=2;strokeColor=#52667b;exitX=0.5;exitY=1;entryX=0.28;entryY=0;dashed=0;labelBackgroundColor=#ffffff;fontColor=#34495e;" edge="1" parent="1" source="ecr" target="endpoint">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="312.0" y="195.0" />
+              <mxPoint x="423.8" y="195.0" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-4" value="" style="endArrow=block;endFill=1;strokeWidth=2;strokeColor=#52667b;exitX=0.5;exitY=1;entryX=0.72;entryY=0;dashed=0;labelBackgroundColor=#ffffff;fontColor=#34495e;" edge="1" parent="1" source="s3" target="endpoint">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="650.0" y="195.0" />
+              <mxPoint x="538.2" y="195.0" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-5" value="" style="endArrow=block;endFill=1;strokeWidth=2;strokeColor=#52667b;exitX=0.5;exitY=1;entryX=0.5;entryY=0;dashed=0;labelBackgroundColor=#ffffff;fontColor=#34495e;" edge="1" parent="1" source="endpoint" target="logs">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="signal" value="&lt;b&gt;Signal&lt;/b&gt;&lt;br&gt;Complaint JSON" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=#eaf2ff;strokeColor=#426ca4;strokeWidth=1.5;fontColor=#26384d;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="45" y="222" width="199" height="90" />
+        </mxCell>
+        <mxCell id="endpoint" value="&lt;b&gt;SageMaker real-time endpoint&lt;/b&gt;&lt;br&gt;Runs the fitted TF-IDF vectorizer&lt;br&gt;and logistic regression classifier" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=#eaf0ff;strokeColor=#566caf;strokeWidth=1.5;fontColor=#26384d;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="351" y="222" width="260" height="90" />
+        </mxCell>
+        <mxCell id="insight" value="&lt;b&gt;Insight&lt;/b&gt;&lt;br&gt;Category, score, model version" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=#e6f4ef;strokeColor=#327d67;strokeWidth=1.5;fontColor=#26384d;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="716" y="222" width="209" height="90" />
+        </mxCell>
+        <mxCell id="action" value="&lt;b&gt;Action&lt;/b&gt;&lt;br&gt;CLI applies the threshold&lt;br&gt;Route or human review" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=#fff1de;strokeColor=#92631b;strokeWidth=1.5;fontColor=#26384d;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1024" y="222" width="192" height="90" />
+        </mxCell>
+        <mxCell id="ecr" value="&lt;b&gt;ECR serving image&lt;/b&gt;&lt;br&gt;Pinned image digest" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=#f4f6f9;strokeColor=#66758b;strokeWidth=1.5;fontColor=#26384d;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="202" y="98" width="220" height="70" />
+        </mxCell>
+        <mxCell id="s3" value="&lt;b&gt;S3 model archive&lt;/b&gt;&lt;br&gt;From managed or local training" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=#eaf2ff;strokeColor=#426ca4;strokeWidth=1.5;fontColor=#26384d;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="540" y="98" width="220" height="70" />
+        </mxCell>
+        <mxCell id="logs" value="&lt;b&gt;CloudWatch endpoint telemetry&lt;/b&gt;&lt;br&gt;Request logs and endpoint metrics" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=#f4f6f9;strokeColor=#66758b;strokeWidth=1.5;fontColor=#26384d;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="351" y="402" width="260" height="70" />
+        </mxCell>
       </root>
     </mxGraphModel>
   </diagram>
