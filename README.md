@@ -54,3 +54,7 @@ The script publishes two images to ECR, starts managed training, and deploys the
 - [Architecture](docs/architecture/README.md) for images, storage, roles, and the request path.
 - [MLOps design](docs/mlops.md) for evaluation gates, versioning, rollout, and monitoring.
 - [Troubleshooting](docs/troubleshooting.md) and [cost and cleanup](docs/costing.md) for operating the lab.
+
+## License
+
+This workshop is available under the [MIT License](LICENSE).
