@@ -1,6 +1,6 @@
 # SageMaker AI Signal → Insight → Action Workshop
 
-Train a TF-IDF and logistic regression classifier on synthetic complaint data, run the same training code in SageMaker AI, and deploy the resulting model to a real-time endpoint. The workshop is the SageMaker companion to the [Bedrock Signal → Insight → Action workshop](https://github.com/Emojot-Inc/ai-signal-insight-action-workshop).
+Train a TF-IDF and logistic regression classifier on synthetic complaint data, run the same training code in SageMaker AI, and deploy the resulting model to a real-time endpoint. The workshop is the SageMaker companion to the [Bedrock Signal → Insight → Action workshop](https://github.com/rav94/ai-signal-insight-action-workshop).
 
 | Lab | What you do | What to verify |
 |---|---|---|
