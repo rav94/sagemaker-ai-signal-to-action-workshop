@@ -1,0 +1,65 @@
+text,label
+I was charged twice for my monthly plan,billing
+The invoice shows the wrong tax amount,billing
+My refund has not arrived yet,billing
+Please explain this unexpected subscription fee,billing
+My credit card was billed after cancellation,billing
+I need a copy of my payment receipt,billing
+The discount code did not reduce my bill,billing
+I was overcharged for the premium package,billing
+The renewal payment failed but funds were deducted,billing
+Can you correct the amount on my invoice,billing
+I need to change the billing address,billing
+Why was my card charged again today,billing
+The payment went through but the invoice is missing,billing
+Please refund the duplicate transaction,billing
+My subscription price increased without notice,billing
+The bank statement lists two separate charges,billing
+The mobile app crashes when I open the dashboard,technical
+Login fails with an authentication error,technical
+The API returns a 500 status code,technical
+The page freezes when uploading a file,technical
+I cannot reset my password using the email link,technical
+The integration stopped syncing data,technical
+Our dashboard is displaying a blank screen,technical
+The website loads very slowly after the update,technical
+The webhook is sending invalid payloads,technical
+The application keeps logging me out,technical
+Exporting reports causes the browser to hang,technical
+The search feature is not returning any results,technical
+The notification settings are not saving,technical
+I get a timeout error while opening reports,technical
+The service is unavailable on my phone,technical
+The latest release broke the login form,technical
+My package arrived three days late,delivery
+The parcel was delivered to the wrong house,delivery
+Tracking information has not updated for a week,delivery
+My order is still missing after dispatch,delivery
+The courier left my package outside in the rain,delivery
+When will my replacement item be shipped,delivery
+The delivery driver never contacted me,delivery
+My order has not reached the pickup point,delivery
+The shipment was marked delivered but I have nothing,delivery
+I received a damaged box from the courier,delivery
+Please update the shipping address before dispatch,delivery
+The estimated delivery date has passed,delivery
+The tracking number is not recognized,delivery
+My express delivery is delayed,delivery
+The parcel was returned before I could collect it,delivery
+Part of my order did not arrive in the shipment,delivery
+The support agent was rude during our call,service
+Nobody responded to my complaint for two days,service
+Customer service closed my ticket without helping,service
+I had a great interaction with the help desk,service
+The representative gave me incorrect information,service
+I was transferred between multiple support teams,service
+The support team never followed up on my request,service
+I would like to speak with a manager,service
+The agent was polite but could not resolve my concern,service
+It took too long to reach a human representative,service
+My support ticket was ignored,service
+The helpline staff were unprofessional,service
+I want to leave feedback about your customer service,service
+The support response was unhelpful,service
+Nobody answered the phone at the contact center,service
+The representative ended the chat unexpectedly,service

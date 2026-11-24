@@ -1,0 +1,93 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: SageMaker AI real-time complaint classification workshop
+Parameters:
+  ArtifactBucket:
+    Type: String
+  ArtifactKey:
+    Type: String
+  ImageUri:
+    Type: String
+    Description: Immutable ECR image reference with a sha256 digest
+    AllowedPattern: '.+@sha256:[a-f0-9]{64}'
+  ImageRepositoryName:
+    Type: String
+  InstanceType:
+    Type: String
+    Default: ml.m5.large
+Resources:
+  ModelExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: sagemaker.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LoadWorkshopModel
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: s3:GetObject
+                Resource: !Sub 'arn:${AWS::Partition}:s3:::${ArtifactBucket}/${ArtifactKey}'
+              - Effect: Allow
+                Action: s3:ListBucket
+                Resource: !Sub 'arn:${AWS::Partition}:s3:::${ArtifactBucket}'
+              - Effect: Allow
+                Action: ecr:GetAuthorizationToken
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:BatchGetImage
+                  - ecr:GetDownloadUrlForLayer
+                Resource: !Sub 'arn:${AWS::Partition}:ecr:${AWS::Region}:${AWS::AccountId}:repository/${ImageRepositoryName}'
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                  - logs:DescribeLogStreams
+                Resource: !GetAtt EndpointLogs.Arn
+              - Effect: Allow
+                Action: cloudwatch:PutMetricData
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    cloudwatch:namespace:
+                      - AWS/SageMaker
+                      - /aws/sagemaker/Endpoints
+  EndpointLogs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/sagemaker/Endpoints/${AWS::StackName}'
+      RetentionInDays: 7
+  Model:
+    Type: AWS::SageMaker::Model
+    Properties:
+      ExecutionRoleArn: !GetAtt ModelExecutionRole.Arn
+      EnableNetworkIsolation: true
+      PrimaryContainer:
+        Image: !Ref ImageUri
+        ModelDataUrl: !Sub 's3://${ArtifactBucket}/${ArtifactKey}'
+  EndpointConfig:
+    Type: AWS::SageMaker::EndpointConfig
+    Properties:
+      ProductionVariants:
+        - VariantName: AllTraffic
+          InitialInstanceCount: 1
+          InitialVariantWeight: 1
+          InstanceType: !Ref InstanceType
+          ModelName: !GetAtt Model.ModelName
+  Endpoint:
+    Type: AWS::SageMaker::Endpoint
+    Properties:
+      EndpointName: !Ref AWS::StackName
+      EndpointConfigName: !GetAtt EndpointConfig.EndpointConfigName
+Outputs:
+  EndpointName:
+    Value: !GetAtt Endpoint.EndpointName
+  Logs:
+    Value: !Ref EndpointLogs

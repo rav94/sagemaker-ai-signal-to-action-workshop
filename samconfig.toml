@@ -1,0 +1,6 @@
+version = 0.1
+
+[workshop.deploy.parameters]
+stack_name = "moratuwa-complaint-sagemaker"
+capabilities = "CAPABILITY_IAM"
+confirm_changeset = true
