@@ -10,4 +10,7 @@
 | Model startup or ping failure | Check CloudFormation events and `/aws/sagemaker/Endpoints/<endpoint-name>`. Check the image architecture, archive contents, and package versions. |
 | Access denied | Check profile and region with STS. Distinguish deployer `iam:PassRole`, the training role’s access to the CSV and output prefix, the serving role’s access to the model archive, and participant `sagemaker:InvokeEndpoint`. |
 | `ModelError` on malformed input | SageMaker returns HTTP 424. Read the original status in the runtime error to identify the container’s HTTP 400. The intentional invalid fixture has a non-string `message`. |
+| Candidate alarm stays clear during the rollback drill | Send successful probe requests while the candidate is receiving traffic. Check the endpoint, variant, and candidate configuration dimensions on the alarm. Missing data does not trigger rollback. |
+| Guarded stack update reports failure | Compare alarm history, stack events, the final endpoint configuration, and a fresh response's `modelVersion`. An unrelated deployment failure can also trigger stack rollback. |
+| Content check stops before inference | A policy intervention exits `3`. On an API failure, check the guardrail ID, published version, region, and caller's `bedrock:ApplyGuardrail` permission. |
 | S3 bucket blocks teardown | Confirm the bucket is the assets stack output, the endpoint is gone, and the training job has ended. Then follow [cleanup](costing.md#delete-after-the-final-invocation). |

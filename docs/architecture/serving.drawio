@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<mxfile host="app.diagrams.net" pages="2">
+<mxfile host="app.diagrams.net" pages="4">
   <diagram name="Managed training to real-time deployment" id="training-to-endpoint">
     <mxGraphModel dx="1380" dy="650" grid="1" page="1" pageWidth="1260" pageHeight="588">
       <root>
@@ -151,6 +151,127 @@
         </mxCell>
         <mxCell id="logs" value="&lt;b&gt;CloudWatch endpoint telemetry&lt;/b&gt;&lt;br&gt;Request logs and endpoint metrics" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=#f4f6f9;strokeColor=#66758b;strokeWidth=1.5;fontColor=#26384d;fontSize=14;" vertex="1" parent="1">
           <mxGeometry as="geometry" x="351" y="402" width="260" height="70" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram name="SageMaker guarded endpoint update" id="sagemaker-guarded-update">
+    <mxGraphModel dx="1380" dy="650" grid="1" page="1" pageWidth="1260" pageHeight="500">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="SageMaker guarded endpoint update" style="text;align=left;verticalAlign=middle;fontSize=29;fontColor=#142437;fontStyle=1;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="45" y="19" width="1160" height="34" />
+        </mxCell>
+        <mxCell id="subtitle" value="An all-at-once blue/green update on the existing endpoint, with the baseline fleet retained during monitoring" style="text;align=left;verticalAlign=middle;fontSize=16;fontColor=#51647a;fontStyle=0;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="45" y="57" width="1160" height="22" />
+        </mxCell>
+        <mxCell id="note" value="The workshop uses a 1 microsecond latency threshold to exercise rollback. Verify the final configuration and a fresh inference response." style="text;align=left;verticalAlign=middle;fontSize=15;fontColor=#51647a;fontStyle=0;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="45" y="458" width="1160" height="24" />
+        </mxCell>
+        <mxCell id="edge-0" value="" style="endArrow=block;endFill=1;strokeWidth=2;strokeColor=#52667b;exitX=1;exitY=0.5;entryX=0;entryY=0.5;dashed=0;labelBackgroundColor=#ffffff;fontColor=#34495e;" edge="1" parent="1" source="baseline" target="candidate">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="label-0" value="New config" style="text;align=center;verticalAlign=middle;fontSize=13;fontColor=#34495e;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="268.0" y="163" width="74" height="18" />
+        </mxCell>
+        <mxCell id="edge-1" value="" style="endArrow=block;endFill=1;strokeWidth=2;strokeColor=#52667b;exitX=1;exitY=0.5;entryX=0;entryY=0.5;dashed=0;labelBackgroundColor=#ffffff;fontColor=#34495e;" edge="1" parent="1" source="candidate" target="alarm">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="label-1" value="Probe requests" style="text;align=center;verticalAlign=middle;fontSize=13;fontColor=#34495e;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="575.0" y="163" width="98" height="18" />
+        </mxCell>
+        <mxCell id="edge-2" value="" style="endArrow=block;endFill=1;strokeWidth=2;strokeColor=#52667b;exitX=1;exitY=0.5;entryX=0;entryY=0.5;dashed=0;labelBackgroundColor=#ffffff;fontColor=#34495e;" edge="1" parent="1" source="alarm" target="promote">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="label-2" value="Window passes" style="text;align=center;verticalAlign=middle;fontSize=13;fontColor=#34495e;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="904.5" y="163" width="91" height="18" />
+        </mxCell>
+        <mxCell id="edge-3" value="" style="endArrow=block;endFill=1;strokeWidth=2;strokeColor=#52667b;exitX=0.5;exitY=1;entryX=0.5;entryY=0;dashed=0;labelBackgroundColor=#ffffff;fontColor=#34495e;" edge="1" parent="1" source="alarm" target="rollback">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="label-3" value="Alarm fires" style="text;align=center;verticalAlign=middle;fontSize=13;fontColor=#34495e;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="800.5" y="267" width="77" height="18" />
+        </mxCell>
+        <mxCell id="edge-4" value="" style="endArrow=block;endFill=1;strokeWidth=2;strokeColor=#52667b;exitX=1;exitY=0.5;entryX=0;entryY=0.5;dashed=0;labelBackgroundColor=#ffffff;fontColor=#34495e;" edge="1" parent="1" source="rollback" target="verify">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="label-4" value="Check release" style="text;align=center;verticalAlign=middle;fontSize=13;fontColor=#34495e;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="903.5" y="350" width="91" height="18" />
+        </mxCell>
+        <mxCell id="baseline" value="&lt;b&gt;Endpoint serves baseline&lt;/b&gt;&lt;br&gt;Version v1 is InService" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=#eaf0ff;strokeColor=#566caf;strokeWidth=1.5;fontColor=#26384d;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="45" y="148" width="215" height="86" />
+        </mxCell>
+        <mxCell id="candidate" value="&lt;b&gt;Update serves candidate&lt;/b&gt;&lt;br&gt;Same endpoint, new configuration&lt;br&gt;All traffic shifts to v2" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=#e6f4ef;strokeColor=#327d67;strokeWidth=1.5;fontColor=#26384d;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="350" y="148" width="227" height="86" />
+        </mxCell>
+        <mxCell id="alarm" value="&lt;b&gt;CloudWatch watches v2&lt;/b&gt;&lt;br&gt;ModelLatency for candidate config&lt;br&gt;Five-minute monitoring window" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=#f4f6f9;strokeColor=#66758b;strokeWidth=1.5;fontColor=#26384d;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="671" y="148" width="228" height="86" />
+        </mxCell>
+        <mxCell id="promote" value="&lt;b&gt;Keep candidate&lt;/b&gt;&lt;br&gt;Endpoint continues serving v2" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=#e6f4ef;strokeColor=#327d67;strokeWidth=1.5;fontColor=#26384d;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1000" y="148" width="215" height="86" />
+        </mxCell>
+        <mxCell id="rollback" value="&lt;b&gt;SageMaker restores v1&lt;/b&gt;&lt;br&gt;Traffic goes back to the old fleet" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=#fff1de;strokeColor=#92631b;strokeWidth=1.5;fontColor=#26384d;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="671" y="336" width="228" height="81" />
+        </mxCell>
+        <mxCell id="verify" value="&lt;b&gt;Verify rollback&lt;/b&gt;&lt;br&gt;Baseline config and modelVersion" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=#eaf0ff;strokeColor=#566caf;strokeWidth=1.5;fontColor=#26384d;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1000" y="336" width="215" height="81" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram name="Bedrock content screening before SageMaker" id="bedrock-content-screening">
+    <mxGraphModel dx="1380" dy="650" grid="1" page="1" pageWidth="1260" pageHeight="500">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="Bedrock content screening before SageMaker" style="text;align=left;verticalAlign=middle;fontSize=29;fontColor=#142437;fontStyle=1;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="45" y="19" width="1160" height="34" />
+        </mxCell>
+        <mxCell id="subtitle" value="The application calls a published guardrail version and forwards approved complaint text to the classifier" style="text;align=left;verticalAlign=middle;fontSize=16;fontColor=#51647a;fontStyle=0;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="45" y="57" width="1160" height="22" />
+        </mxCell>
+        <mxCell id="note" value="This lab stops on every intervention, including masking. The routing CLI can apply its score threshold after a successful response." style="text;align=left;verticalAlign=middle;fontSize=15;fontColor=#51647a;fontStyle=0;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="45" y="458" width="1160" height="24" />
+        </mxCell>
+        <mxCell id="edge-0" value="" style="endArrow=block;endFill=1;strokeWidth=2;strokeColor=#52667b;exitX=1;exitY=0.5;entryX=0;entryY=0.5;dashed=0;labelBackgroundColor=#ffffff;fontColor=#34495e;" edge="1" parent="1" source="input" target="check">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="label-0" value="Message" style="text;align=center;verticalAlign=middle;fontSize=13;fontColor=#34495e;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="267.0" y="162" width="74" height="18" />
+        </mxCell>
+        <mxCell id="edge-1" value="" style="endArrow=block;endFill=1;strokeWidth=2;strokeColor=#52667b;exitX=1;exitY=0.5;entryX=0;entryY=0.5;dashed=0;labelBackgroundColor=#ffffff;fontColor=#34495e;" edge="1" parent="1" source="check" target="invoke">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="label-1" value="NONE" style="text;align=center;verticalAlign=middle;fontSize=13;fontColor=#34495e;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="592.0" y="162" width="74" height="18" />
+        </mxCell>
+        <mxCell id="edge-2" value="" style="endArrow=block;endFill=1;strokeWidth=2;strokeColor=#52667b;exitX=1;exitY=0.5;entryX=0;entryY=0.5;dashed=0;labelBackgroundColor=#ffffff;fontColor=#34495e;" edge="1" parent="1" source="invoke" target="output">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="label-2" value="Response" style="text;align=center;verticalAlign=middle;fontSize=13;fontColor=#34495e;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="913.0" y="162" width="74" height="18" />
+        </mxCell>
+        <mxCell id="edge-3" value="" style="endArrow=block;endFill=1;strokeWidth=2;strokeColor=#52667b;exitX=0.5;exitY=1;entryX=0.5;entryY=0;dashed=0;labelBackgroundColor=#ffffff;fontColor=#34495e;" edge="1" parent="1" source="check" target="stop">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="label-3" value="Intervention or check failure" style="text;align=center;verticalAlign=middle;fontSize=13;fontColor=#34495e;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="458.5" y="271" width="203" height="18" />
+        </mxCell>
+        <mxCell id="input" value="&lt;b&gt;Complaint JSON&lt;/b&gt;&lt;br&gt;Application reads message" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=#eaf2ff;strokeColor=#426ca4;strokeWidth=1.5;fontColor=#26384d;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="45" y="147" width="213" height="88" />
+        </mxCell>
+        <mxCell id="check" value="&lt;b&gt;Bedrock ApplyGuardrail&lt;/b&gt;&lt;br&gt;Checks text as INPUT&lt;br&gt;Published guardrail version" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=#eaf0ff;strokeColor=#566caf;strokeWidth=1.5;fontColor=#26384d;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="350" y="147" width="228" height="88" />
+        </mxCell>
+        <mxCell id="invoke" value="&lt;b&gt;SageMaker endpoint&lt;/b&gt;&lt;br&gt;InvokeEndpoint with checked text" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=#e6f4ef;strokeColor=#327d67;strokeWidth=1.5;fontColor=#26384d;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="680" y="147" width="219" height="88" />
+        </mxCell>
+        <mxCell id="output" value="&lt;b&gt;Prediction JSON&lt;/b&gt;&lt;br&gt;Category, score, modelVersion" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=#e6f4ef;strokeColor=#327d67;strokeWidth=1.5;fontColor=#26384d;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1000" y="147" width="215" height="88" />
+        </mxCell>
+        <mxCell id="stop" value="&lt;b&gt;Stop before inference&lt;/b&gt;&lt;br&gt;No SageMaker request" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=#fff1de;strokeColor=#92631b;strokeWidth=1.5;fontColor=#26384d;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="350" y="337" width="228" height="81" />
         </mxCell>
       </root>
     </mxGraphModel>

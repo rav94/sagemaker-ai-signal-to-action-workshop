@@ -51,4 +51,6 @@ fi
 
 Look for `Artifact handoff verified.` Then invoke the endpoint using the [participant lab](participant-guide.md). For the example release, check that the response contains `"modelVersion": "phase1-cloud-v1"`.
 
+Once the endpoint is verified, keep the release as the baseline for the [guarded update and content check lab](guardrails.md).
+
 If the job is still provisioning during the workshop, show its status and use the completed rehearsal job and endpoint for the remainder of the exercise. With the tiny dataset, the lifecycle is more useful to teach than the compute time.

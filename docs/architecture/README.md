@@ -27,9 +27,13 @@ The caller signs an `InvokeEndpoint` request to the SageMaker Runtime API. SageM
 
 ## Release and content safeguards
 
+![Blue/green rollout and automatic rollback for a SageMaker endpoint](sagemaker-guarded-update.png)
+
 The optional [guarded update](../guardrails.md#1-protect-a-sagemaker-endpoint-update) attaches a candidate model-latency alarm to SageMaker's blue/green deployment policy. The alarm watches the new endpoint configuration and can trigger rollback to the prior fleet.
 
-The [guarded caller](../guardrails.md#2-use-bedrock-applyguardrail-in-front-of-sagemaker) calls Bedrock ApplyGuardrail before invoking the endpoint. It forwards the complaint to SageMaker when the published guardrail returns `NONE`. In this lab, every intervention or check failure stops the request.
+![Bedrock ApplyGuardrail decision before SageMaker inference](bedrock-content-screening.png)
+
+The [guarded caller](../guardrails.md#2-use-bedrock-applyguardrail-in-front-of-sagemaker) calls Bedrock ApplyGuardrail before invoking the endpoint. It forwards the complaint to SageMaker when the published guardrail returns `NONE`. In this lab, every intervention or check failure stops the request. The [guardrails contract](../../specs/06-guardrails.md) describes the status codes and the evidence to capture.
 
 ## Stack ownership and identities
 

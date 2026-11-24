@@ -2,13 +2,9 @@
 
 Run this lab after the baseline SageMaker endpoint is `InService`. One exercise protects an **endpoint release**. The other checks **request content** before invoking the endpoint.
 
-```mermaid
-flowchart LR
-    A[Endpoint serves baseline] --> B[Guarded update serves candidate]
-    B --> C[CloudWatch monitors candidate latency]
-    C -->|Alarm| A
-    C -->|Monitoring window passes| D[Candidate remains in service]
-```
+![Blue/green endpoint update with candidate monitoring and rollback](architecture/sagemaker-guarded-update.png)
+
+[Editable architecture diagrams](architecture/serving.drawio) · [Guardrails contract](../specs/06-guardrails.md)
 
 ## 1. Protect a SageMaker endpoint update
 
@@ -66,18 +62,13 @@ aws cloudformation describe-stack-events --stack-name "$WORKSHOP_STACK" \
   --output table
 ```
 
-**Pass condition:** the alarm records an intervention during the candidate's monitoring window. After rollback, the same endpoint is `InService` on the recorded baseline configuration and a fresh invocation returns the baseline `modelVersion`. CloudFormation can report a failed update when that rollback is expected. A failed update by itself is insufficient evidence that the alarm caused the rollback.
+**Pass condition:** CloudWatch history shows the alarm changing to `ALARM` during the candidate's monitoring window. After rollback, the same endpoint is `InService` on the recorded baseline configuration and a fresh invocation returns the baseline `modelVersion`. CloudFormation can report a failed update when that rollback is expected. A failed update by itself is insufficient evidence that the alarm caused the rollback.
 
 Start the update before the live teaching slot. If there are too few data points or provisioning runs long, use the alarm, stack events, and baseline response from a completed rehearsal.
 
 ## 2. Use Bedrock ApplyGuardrail in front of SageMaker
 
-```mermaid
-flowchart LR
-    A[Complaint text] --> B[Bedrock ApplyGuardrail]
-    B -->|NONE| C[SageMaker InvokeEndpoint]
-    B -->|Intervention or error| D[Stop before inference]
-```
+![Content check with an allow path and an intervention path](architecture/bedrock-content-screening.png)
 
 Use a **published** guardrail version from the existing Bedrock workshop stack. Retrieve its `BedrockGuardrailId` and `BedrockGuardrailVersion` outputs. The caller needs `bedrock:ApplyGuardrail` on the guardrail and `sagemaker:InvokeEndpoint` on the workshop endpoint. If the guardrail is in a different region, set `BEDROCK_GUARDRAIL_REGION` to that region and keep the SageMaker region in your usual AWS settings. Use the live Bedrock stack name and region for the following commands.
 
@@ -107,7 +98,7 @@ Run the second case with a synthetic email address:
 python scripts/invoke-with-guardrail.py events/complaint-sensitive.json
 ```
 
-With the Bedrock workshop guardrail's email masking policy enabled, the expected result is a guardrail intervention, exit status `3`, and no SageMaker request. Rehearse that fixture with the published version you will use in class. For production enforcement, give endpoint invoke permission to the application role that performs the content check and route callers through that application.
+With the Bedrock workshop guardrail's email masking policy enabled, the expected result is a guardrail intervention, exit status `3`, and no SageMaker request. For the allowed fixture, verify that the caller prints inference JSON. For the synthetic email fixture, check the displayed outcome and run `echo $?` immediately afterward to see the exit code. Rehearse both fixtures with the published version you will use in class. For production enforcement, give endpoint invoke permission to the application role that performs the content check and route callers through that application.
 
 [AWS ApplyGuardrail guide](https://docs.aws.amazon.com/bedrock/latest/userguide/guardrails-use-independent-api.html) · [Bedrock workshop policy](https://github.com/Emojot-Inc/ai-signal-insight-action-workshop/blob/6ad7944/template.yaml)
 

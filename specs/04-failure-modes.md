@@ -8,6 +8,6 @@
 | Wrong content type or malformed message | Container returns HTTP 415 or 400. SageMaker Runtime reports `ModelError` with the original container status. | Inspect the original status and stop before the action stage. |
 | Unexpected inference version | A valid response reports a different `modelVersion` | Compare the endpoint’s model URI with the completed training job output and verify the configured release before using the result. |
 | Candidate latency alarm during update | SageMaker initiates rollback during the guarded update | Compare the final endpoint configuration and inference version with the recorded baseline. |
-| Content check intervenes or fails | The guarded caller exits before `InvokeEndpoint` | Inspect its outcome and use the application fallback. |
+| Content check intervenes or fails | The guarded caller exits before `InvokeEndpoint` | Distinguish an intervention from an API or configuration error using the [guardrails exit-code contract](06-guardrails.md#bedrock-content-check-before-inference). |
 | Low score | Valid insight with score below policy threshold | Route to simulated review. |
 | Invocation unavailable or denied | Runtime call fails | Inspect endpoint state and caller IAM. No insight is available for routing. |

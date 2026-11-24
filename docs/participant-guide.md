@@ -42,4 +42,8 @@ aws sagemaker-runtime invoke-endpoint \
 
 Expect the command to fail with `ModelError`. The container returned HTTP 400. The AWS service wraps that as HTTP 424 and includes the original status in the error details. For the local lab, send the same fixture with `curl -i` to see the container status directly. [AWS InvokeEndpoint errors](https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_runtime_InvokeEndpoint.html#API_runtime_InvokeEndpoint_Errors)
 
+## 5. Inspect the safeguards
+
+Follow the [guardrails lab](guardrails.md) after verifying the baseline endpoint. Compare the endpoint configuration and model version before and after the instructor's guarded rollout. Then screen a normal complaint and a synthetic email complaint. Confirm that the normal case can return an insight and the intervention stops before inference. If your role lacks content-check or deployment privileges, use the instructor's captured run.
+
 If a shared endpoint is unavailable, use the local serving process or run the action exercise on `events/insight-example.json`. That example is a supplied fixture.
