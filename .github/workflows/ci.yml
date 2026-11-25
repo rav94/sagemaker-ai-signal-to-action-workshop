@@ -1,0 +1,27 @@
+name: Workshop CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  container-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check shell scripts
+        shell: bash
+        run: |
+          for script in scripts/*.sh scripts/lib/*.sh; do
+            bash -n "$script"
+          done
+      - name: Train locally and test the serving container
+        run: bash scripts/smoke-containers.sh

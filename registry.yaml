@@ -1,0 +1,8 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Model Package Group for SageMaker workshop releases
+Resources:
+  WorkshopModelPackageGroup:
+    Type: AWS::SageMaker::ModelPackageGroup
+    Properties:
+      ModelPackageGroupName: !Ref AWS::StackName
+      ModelPackageGroupDescription: Versioned candidates for the complaint classifier workshop

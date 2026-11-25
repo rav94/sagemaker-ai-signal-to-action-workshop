@@ -1,0 +1,41 @@
+name: Deploy approved SageMaker release
+
+on:
+  workflow_dispatch:
+    inputs:
+      model_package_arn:
+        description: Approved versioned SageMaker model package ARN
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: workshop-sagemaker-deployment
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      WORKSHOP_ACCOUNT_ID: ${{ vars.WORKSHOP_ACCOUNT_ID }}
+      WORKSHOP_STACK: ${{ vars.WORKSHOP_STACK }}
+      MODEL_PACKAGE_ARN: ${{ inputs.model_package_arn }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Assume the teaching account deployment role
+        uses: aws-actions/configure-aws-credentials@v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          allowed-account-ids: ${{ vars.WORKSHOP_ACCOUNT_ID }}
+      - name: Deploy and verify the approved model package
+        run: bash scripts/deploy-approved.sh "$MODEL_PACKAGE_ARN"

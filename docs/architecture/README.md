@@ -25,6 +25,10 @@ A SageMaker training job runs to completion and releases its compute. The provis
 
 The caller signs an `InvokeEndpoint` request to the SageMaker Runtime API. SageMaker sends it to `POST /invocations` in the serving container on port `8080`. The container loads the fitted pipeline from `/opt/ml/model` at startup. The response contains a category, score, and model version. The caller can then use the local action CLI to simulate routing or human review. The serving contract is the same whether the artifact was trained locally or on SageMaker. [Inference contract](../../specs/02-inference-contract.md) · [AWS InvokeEndpoint API](https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_runtime_InvokeEndpoint.html)
 
+## Registered release path
+
+The optional [Registry lab](../model-registry-ci-cd.md) registers the completed archive and serving image digest before serving deployment. A manual GitHub Actions run or the terminal helper reads the approved package and promotes its exact assets. The registry stack owns the Model Package Group. See the [release contract](../../specs/07-registry-release.md).
+
 ## Release and content safeguards
 
 ![Blue/green rollout and automatic rollback for a SageMaker endpoint](sagemaker-guarded-update.png)

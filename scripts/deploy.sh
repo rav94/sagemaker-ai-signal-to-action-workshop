@@ -2,13 +2,18 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-usage="Usage: bash scripts/deploy.sh MODEL_VERSION [--cloud-train]"
+usage="Usage: bash scripts/deploy.sh MODEL_VERSION [--cloud-train] [--register-only]"
 version="${1:?${usage}}"
-training_mode="${2:-}"
-if [[ "$#" -gt 2 || ( -n "$training_mode" && "$training_mode" != --cloud-train ) ]]; then
-  echo "$usage" >&2
-  exit 2
-fi
+shift
+training_mode=local
+register_only=false
+for option in "$@"; do
+  case "$option" in
+    --cloud-train) training_mode=cloud ;;
+    --register-only) register_only=true ;;
+    *) echo "$usage" >&2; exit 2 ;;
+  esac
+done
 : "${AWS_PROFILE:?Set AWS_PROFILE to the teaching sandbox profile}"
 : "${AWS_REGION:?Set AWS_REGION to the teaching sandbox Region}"
 : "${WORKSHOP_ACCOUNT_ID:?Set WORKSHOP_ACCOUNT_ID to the approved teaching account ID}"
@@ -16,10 +21,16 @@ export AWS_PAGER=""
 
 stack="${WORKSHOP_STACK:-sagemaker-ai-signal-insight-action-workshop}"
 storage_stack="${stack}-assets"
+registry_stack="${stack}-registry"
 instance_type="${WORKSHOP_INSTANCE_TYPE:-ml.t2.medium}"
 
 if [[ ! "$version" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,120}$ ]]; then
   echo "Use a release version of at most 121 letters, digits, dots, underscores or hyphens, starting with a letter or digit." >&2
+  exit 2
+fi
+
+if [[ "$register_only" == true && "${#registry_stack}" -gt 63 ]]; then
+  echo "Choose WORKSHOP_STACK of at most 54 characters for the registry path." >&2
   exit 2
 fi
 
@@ -31,7 +42,7 @@ fi
 
 docker info >/dev/null
 
-if [[ "$training_mode" != --cloud-train ]]; then
+if [[ "$training_mode" == local ]]; then
   bash scripts/package-model.sh "$version"
 fi
 
@@ -60,7 +71,7 @@ publish_image() {
 }
 
 image_uri=$(publish_image serving "serve-$version")
-if [[ "$training_mode" == --cloud-train ]]; then
+if [[ "$training_mode" == cloud ]]; then
   training_image_uri=$(publish_image training "train-$version")
   training_role_arn=$(stack_output TrainingRoleArn)
   artifact_uri=$(bash scripts/train-cloud.sh "$version" "$stack" "$bucket" \
@@ -71,18 +82,24 @@ if [[ "$training_mode" == --cloud-train ]]; then
   fi
   artifact_key="${artifact_uri#s3://$bucket/}"
 else
-  artifact_digest=$(shasum -a 256 artifacts/model.tar.gz | cut -d ' ' -f 1)
+  archive="${WORKSHOP_MODEL_DIR:-artifacts}/model.tar.gz"
+  artifact_digest=$(shasum -a 256 "$archive" | cut -d ' ' -f 1)
   artifact_key="models/$version/$artifact_digest/model.tar.gz"
-  aws s3 cp artifacts/model.tar.gz "s3://$bucket/$artifact_key"
+  aws s3 cp "$archive" "s3://$bucket/$artifact_key"
 fi
 
 printf 'Published image: %s\nPublished model: s3://%s/%s\n' "$image_uri" "$bucket" "$artifact_key"
 
-aws cloudformation deploy --template-file template.yaml --stack-name "$stack" \
-  --capabilities CAPABILITY_IAM --no-fail-on-empty-changeset \
-  --parameter-overrides "ArtifactBucket=$bucket" "ArtifactKey=$artifact_key" \
-  "ImageUri=$image_uri" "ImageRepositoryName=$repository_name" \
-  "InstanceType=$instance_type" EnableDeploymentGuardrails=false
+if [[ "$register_only" == true ]]; then
+  package_arn=$(bash scripts/register-model.sh "$registry_stack" "$version" \
+    "$image_uri" "s3://$bucket/$artifact_key" "$instance_type")
+  if [[ "$package_arn" != arn:*:sagemaker:"$AWS_REGION":"$account":model-package/"$registry_stack/"* ]]; then
+    echo "Unexpected registered model package ARN: $package_arn" >&2
+    exit 1
+  fi
+  printf 'Model package ARN: %s\nApproval: PendingManualApproval\n' "$package_arn"
+  exit 0
+fi
 
-aws sagemaker describe-endpoint --endpoint-name "$stack" \
-  --query '{Endpoint:EndpointName,Status:EndpointStatus}' --output table
+source scripts/lib/deploy-endpoint.sh
+deploy_workshop_endpoint "$stack" "$bucket" "$artifact_key" "$image_uri" "$repository_name" "$instance_type"

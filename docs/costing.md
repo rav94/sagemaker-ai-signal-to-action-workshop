@@ -27,6 +27,25 @@ aws sagemaker list-endpoints --name-contains "$stack" \
 
 Verify that the endpoint query returns an empty result and that the workshop training job and any guarded update have reached terminal states. If you interrupted the deploy script, check the job by its printed name before deleting the assets.
 
+### Remove the registry stack if used
+
+If you ran the [registry lab](model-registry-ci-cd.md), list the versions in the workshop Model Package Group after verifying endpoint deletion:
+
+```bash
+registry_stack="${stack}-registry"
+aws sagemaker list-model-packages --model-package-group-name "$registry_stack" \
+  --model-package-type Versioned --query 'ModelPackageSummaryList[].ModelPackageArn'
+```
+
+For each listed workshop version, set `package_arn` to its full ARN and run `aws sagemaker delete-model-package --model-package-name "$package_arn"`. Once the group is empty, delete its stack:
+
+```bash
+aws cloudformation delete-stack --stack-name "$registry_stack"
+aws cloudformation wait stack-delete-complete --stack-name "$registry_stack"
+```
+
+### Remove the assets stack
+
 Find the bucket output for the assets stack:
 
 ```bash
