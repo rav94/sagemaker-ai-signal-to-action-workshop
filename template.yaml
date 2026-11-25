@@ -13,7 +13,7 @@ Parameters:
     Type: String
   InstanceType:
     Type: String
-    Default: ml.m5.large
+    Default: ml.t2.medium
   EnableDeploymentGuardrails:
     Type: String
     AllowedValues: ['true', 'false']

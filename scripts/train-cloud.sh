@@ -8,7 +8,7 @@ stack="$2"
 bucket="$3"
 image_uri="$4"
 role_arn="$5"
-instance_type="${WORKSHOP_TRAINING_INSTANCE_TYPE:-ml.m5.large}"
+instance_type="${WORKSHOP_TRAINING_INSTANCE_TYPE:-ml.t3.large}"
 
 job_name="${stack:0:34}-train-$(date -u +%Y%m%d%H%M%S)-$RANDOM"
 data_digest=$(shasum -a 256 data/complaints.csv | cut -d ' ' -f 1)

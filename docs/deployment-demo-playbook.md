@@ -9,10 +9,11 @@ Use AWS CLI v2, Docker with Linux AMD64 build support, and a teaching sandbox. F
 - The instructor role needs permission to publish to ECR and S3, deploy both CloudFormation stacks, create and inspect a training job, and pass the training and serving execution roles. Participant invoke permissions can be limited to the shared endpoint.
 
 ```bash
-export AWS_PROFILE=teaching
+export AWS_PROFILE="your-teaching-profile"
 export AWS_REGION=us-east-1
-export WORKSHOP_ACCOUNT_ID=123456789012
 aws sts get-caller-identity
+# After confirming the account above, replace this example ID.
+export WORKSHOP_ACCOUNT_ID=123456789012
 docker info --format '{{.ServerVersion}}'
 ```
 
