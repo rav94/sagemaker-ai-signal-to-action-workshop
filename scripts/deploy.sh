@@ -2,15 +2,17 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-usage="Usage: bash scripts/deploy.sh MODEL_VERSION [--cloud-train] [--register-only]"
+usage="Usage: bash scripts/deploy.sh MODEL_VERSION [--cloud-train] [--register-only] | MODEL_VERSION --pipeline"
 version="${1:?${usage}}"
 shift
 training_mode=local
 register_only=false
+pipeline_mode=false
 for option in "$@"; do
   case "$option" in
     --cloud-train) training_mode=cloud ;;
     --register-only) register_only=true ;;
+    --pipeline) pipeline_mode=true; training_mode=cloud ;;
     *) echo "$usage" >&2; exit 2 ;;
   esac
 done
@@ -29,7 +31,11 @@ if [[ ! "$version" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,120}$ ]]; then
   exit 2
 fi
 
-if [[ "$register_only" == true && "${#registry_stack}" -gt 63 ]]; then
+if [[ "$pipeline_mode" == true && "$register_only" == true ]]; then
+  echo "--pipeline already registers candidates that pass the evaluation gate." >&2
+  exit 2
+fi
+if [[ ( "$register_only" == true || "$pipeline_mode" == true ) && "${#registry_stack}" -gt 63 ]]; then
   echo "Choose WORKSHOP_STACK of at most 54 characters for the registry path." >&2
   exit 2
 fi
@@ -74,6 +80,11 @@ image_uri=$(publish_image serving "serve-$version")
 if [[ "$training_mode" == cloud ]]; then
   training_image_uri=$(publish_image training "train-$version")
   training_role_arn=$(stack_output TrainingRoleArn)
+  if [[ "$pipeline_mode" == true ]]; then
+    bash scripts/start-pipeline.sh "$stack" "$version" "$bucket" "$repository_name" \
+      "$training_image_uri" "$image_uri" "$training_role_arn" "$instance_type"
+    exit 0
+  fi
   artifact_uri=$(bash scripts/train-cloud.sh "$version" "$stack" "$bucket" \
     "$training_image_uri" "$training_role_arn")
   if [[ "$artifact_uri" != "s3://$bucket/training-output/"* ]]; then

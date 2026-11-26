@@ -1,0 +1,84 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Native SageMaker pipeline for training, evaluation and registration
+Parameters:
+  ArtifactBucket:
+    Type: String
+  DefinitionKey:
+    Type: String
+  JobRoleArn:
+    Type: String
+  PackageGroup:
+    Type: String
+  ImageRepositoryName:
+    Type: String
+Resources:
+  PipelineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: sagemaker.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: WorkshopPipeline
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: iam:PassRole
+                Resource: !Ref JobRoleArn
+                Condition:
+                  StringEquals:
+                    iam:PassedToService: sagemaker.amazonaws.com
+              - Effect: Allow
+                Action:
+                  - sagemaker:CreateTrainingJob
+                  - sagemaker:DescribeTrainingJob
+                  - sagemaker:StopTrainingJob
+                  - sagemaker:AddTags
+                Resource: !Sub 'arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:training-job/*'
+              - Effect: Allow
+                Action:
+                  - sagemaker:CreateProcessingJob
+                  - sagemaker:DescribeProcessingJob
+                  - sagemaker:StopProcessingJob
+                  - sagemaker:AddTags
+                Resource: !Sub 'arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:processing-job/*'
+              - Effect: Allow
+                Action:
+                  - sagemaker:CreateModelPackage
+                  - sagemaker:DescribeModelPackage
+                  - sagemaker:DescribeModelPackageGroup
+                  - sagemaker:AddTags
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:model-package-group/${PackageGroup}'
+                  - !Sub 'arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:model-package/${PackageGroup}/*'
+              - Effect: Allow
+                Action: s3:GetObject
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:s3:::${ArtifactBucket}/${DefinitionKey}'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${ArtifactBucket}/training-data/*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${ArtifactBucket}/training-output/*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${ArtifactBucket}/evaluation-output/*'
+              - Effect: Allow
+                Action: ecr:GetAuthorizationToken
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - ecr:BatchGetImage
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:BatchCheckLayerAvailability
+                Resource: !Sub 'arn:${AWS::Partition}:ecr:${AWS::Region}:${AWS::AccountId}:repository/${ImageRepositoryName}'
+  WorkshopPipeline:
+    Type: AWS::SageMaker::Pipeline
+    Properties:
+      PipelineName: !Ref AWS::StackName
+      PipelineDescription: Train, evaluate, and register a workshop candidate
+      RoleArn: !GetAtt PipelineRole.Arn
+      PipelineDefinition:
+        PipelineDefinitionS3Location:
+          Bucket: !Ref ArtifactBucket
+          Key: !Ref DefinitionKey

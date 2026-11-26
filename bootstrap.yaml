@@ -38,12 +38,16 @@ Resources:
                 Resource: !GetAtt ArtifactBucket.Arn
               - Effect: Allow
                 Action: s3:GetObject
-                Resource: !Sub '${ArtifactBucket.Arn}/training-data/*'
+                Resource:
+                  - !Sub '${ArtifactBucket.Arn}/training-data/*'
+                  - !Sub '${ArtifactBucket.Arn}/training-output/*'
               - Effect: Allow
                 Action:
                   - s3:PutObject
                   - s3:AbortMultipartUpload
-                Resource: !Sub '${ArtifactBucket.Arn}/training-output/*'
+                Resource:
+                  - !Sub '${ArtifactBucket.Arn}/training-output/*'
+                  - !Sub '${ArtifactBucket.Arn}/evaluation-output/*'
               - Effect: Allow
                 Action: ecr:GetAuthorizationToken
                 Resource: '*'
@@ -62,12 +66,16 @@ Resources:
                 Resource:
                   - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/sagemaker/TrainingJobs'
                   - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/sagemaker/TrainingJobs:*'
+                  - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/sagemaker/ProcessingJobs'
+                  - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/sagemaker/ProcessingJobs:*'
               - Effect: Allow
                 Action: cloudwatch:PutMetricData
                 Resource: '*'
                 Condition:
                   StringEquals:
-                    cloudwatch:namespace: /aws/sagemaker/TrainingJobs
+                    cloudwatch:namespace:
+                      - /aws/sagemaker/TrainingJobs
+                      - /aws/sagemaker/ProcessingJobs
 Outputs:
   ArtifactBucket:
     Value: !Ref ArtifactBucket

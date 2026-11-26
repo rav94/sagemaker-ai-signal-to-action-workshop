@@ -3,3 +3,5 @@
 !src/
 !src/serve.py
 !src/train.py
+!src/dataset.py
+!src/evaluate.py

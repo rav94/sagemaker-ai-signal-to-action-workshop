@@ -1,4 +1,6 @@
-# Train the complaint classifier on SageMaker AI
+# Direct training and serving walkthrough
+
+Use the [native SageMaker Pipeline](sagemaker-pipeline.md) for the main workshop. This walkthrough exposes the direct training and serving calls as an optional reference.
 
 Run this after training once locally. Students will recognize the dataset, the TF-IDF pipeline, the evaluation report, and the fitted model file. The new piece is how a managed training job moves data and model artifacts between the container and S3.
 

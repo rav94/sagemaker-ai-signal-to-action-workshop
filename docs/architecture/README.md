@@ -1,5 +1,9 @@
 # Workshop architecture
 
+## Main workshop path
+
+The [native SageMaker Pipeline](../sagemaker-pipeline.md) owns training, evaluation, and conditional registration. The approval and [GitHub deployment](../model-registry-ci-cd.md) promote the exact approved model archive and image digest. The diagram below illustrates the artifact handoff used by both paths.
+
 ## Managed training to real-time deployment
 
 ![SageMaker managed training and deployment overview](training-to-endpoint.png)

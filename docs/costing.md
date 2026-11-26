@@ -5,6 +5,7 @@ Budget one shared SageMaker CPU training job and one shared real-time endpoint. 
 | Cost item | How to estimate it |
 |---|---|
 | **Training job** | Use the regional training rate and the completed job’s `BillableTimeInSeconds` from `DescribeTrainingJob`. The job has a 15-minute runtime limit and releases its training compute when it finishes. A local-artifact run skips the AWS training job. |
+| **Pipeline evaluation** | Add the regional Processing rate and duration for one short evaluation job per pipeline execution. |
 | **Real-time endpoint** | Use the regional inference rate and the time the endpoint stays provisioned, including idle time. A four-hour rehearsal window plus a two-hour class with the endpoint present throughout is roughly six instance-hours. |
 | **Guarded endpoint update** | Budget for both the baseline and candidate fleets during the blue/green overlap and for the CloudWatch metric alarm. |
 | **Bedrock content check** | Estimate `ApplyGuardrail` by text units and the enabled filters. Requests that stop at the guardrail still incur any applicable screening charges. |
@@ -26,6 +27,16 @@ aws sagemaker list-endpoints --name-contains "$stack" \
 ```
 
 Verify that the endpoint query returns an empty result and that the workshop training job and any guarded update have reached terminal states. If you interrupted the deploy script, check the job by its printed name before deleting the assets.
+
+### Remove the pipeline stack if used
+
+Wait for the workshop pipeline executions to finish, or stop a running execution by its recorded ARN. After the executions have ended, remove the pipeline stack before removing the Model Package Group:
+
+```bash
+pipeline_stack="${stack}-pipeline"
+aws cloudformation delete-stack --stack-name "$pipeline_stack"
+aws cloudformation wait stack-delete-complete --stack-name "$pipeline_stack"
+```
 
 ### Remove the registry stack if used
 

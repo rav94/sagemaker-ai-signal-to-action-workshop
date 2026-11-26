@@ -5,12 +5,10 @@ Train a TF-IDF and logistic regression classifier on synthetic complaint data, r
 | Lab | What you do | What to verify |
 |---|---|---|
 | **1. Local training and serving** | Fit the pipeline, package the model, and run it over HTTP. | Inspect the evaluation report. Send a complaint and change the routing threshold. |
-| **2. Managed SageMaker training** | Run a CPU training job using a CSV in S3 and a training image in ECR. | Find the job status, evaluation logs, and model archive URI. |
-| **3. Real-time deployment** | Deploy the archive produced by the training job with the separate serving image. | Match the endpoint's model URI to the job output. Invoke the endpoint and check `modelVersion`. |
+| **2. Native SageMaker Pipeline** | Train, evaluate, and register a candidate if it meets the quality threshold. | Find the model archive, evaluation report, gate result, and pending package. |
+| **3. Approved real-time deployment** | Approve a package and promote it with GitHub Actions or the terminal. | Invoke the endpoint and match `modelVersion` to the package. |
 
-![SageMaker training-to-endpoint architecture](docs/architecture/training-to-endpoint.png)
-
-[Architecture and editable diagrams](docs/architecture/README.md) · [Managed training lab](docs/cloud-training.md) · [Deployment playbook](docs/deployment-demo-playbook.md)
+[Native SageMaker Pipeline lab](docs/sagemaker-pipeline.md) · [Deployment playbook](docs/deployment-demo-playbook.md) · [Architecture](docs/architecture/README.md)
 
 ## Run the local lab
 
@@ -41,13 +39,13 @@ The **signal** is the complaint JSON. The **insight** contains the category, sco
 
 ## Train and deploy on AWS
 
-Complete the [sandbox preflight](docs/deployment-demo-playbook.md) first, including separate training and real-time endpoint quotas. Then start one shared job and endpoint:
+Complete the [sandbox preflight](docs/deployment-demo-playbook.md), then start one shared SageMaker Pipeline:
 
 ```bash
-bash scripts/deploy.sh phase1-cloud-v1 --cloud-train
+bash scripts/deploy.sh phase1-pipeline-v1 --pipeline
 ```
 
-The script publishes two images to ECR, starts managed training, and deploys the exact S3 archive returned by the completed job. Follow the [artifact handoff checks](docs/cloud-training.md#inspect-the-handoff) and the [participant invocation lab](docs/participant-guide.md). If managed training is unavailable, the [deployment playbook](docs/deployment-demo-playbook.md#rehearse-with-local-training) also gives the local-artifact deployment path.
+Inspect its [training, evaluation, and quality gate](docs/sagemaker-pipeline.md). When a candidate passes, [review and approve its model package](docs/model-registry-ci-cd.md#review-and-approve-the-package), then promote it and [invoke the endpoint](docs/participant-guide.md). The [direct training walkthrough](docs/cloud-training.md) and [local fallback](docs/deployment-demo-playbook.md#rehearse-with-local-training) remain available for rehearsal.
 
 - [Model Registry and CI/CD lab](docs/model-registry-ci-cd.md) for registering, approving, and promoting a specific release.
 - [Guardrails lab](docs/guardrails.md) for endpoint auto-rollback and a standalone content check before SageMaker inference.

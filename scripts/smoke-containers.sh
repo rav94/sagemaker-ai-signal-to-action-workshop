@@ -26,6 +26,19 @@ docker run --rm --platform linux/amd64 \
   --mount "type=bind,source=$scratch/model,target=/opt/ml/model" \
   --env WORKSHOP_MODEL_VERSION=ci-smoke "$training_image" train
 
+
+mkdir -p "$scratch/archive" "$scratch/evaluation"
+tar -czf "$scratch/archive/model.tar.gz" -C "$scratch/model" \
+  complaint_classifier.joblib model-version.txt
+docker run --rm --platform linux/amd64 --entrypoint python \
+  --mount "type=bind,source=$PWD/data,target=/opt/ml/processing/data,readonly" \
+  --mount "type=bind,source=$scratch/archive,target=/opt/ml/processing/model,readonly" \
+  --mount "type=bind,source=$scratch/evaluation,target=/opt/ml/processing/evaluation" \
+  "$training_image" /opt/program/evaluate.py \
+  --model /opt/ml/processing/model/model.tar.gz \
+  --data /opt/ml/processing/data/complaints.csv \
+  --report /opt/ml/processing/evaluation/evaluation.json
+
 container=$(docker run --rm --platform linux/amd64 -d -p 127.0.0.1::8080 \
   --mount "type=bind,source=$scratch/model,target=/opt/ml/model,readonly" \
   "$serving_image" serve)
@@ -64,5 +77,9 @@ assert insight["modelVersion"] == "ci-smoke", insight
 assert insight["category"] in {"billing", "delivery", "service", "technical"}, insight
 assert type(insight["score"]) in (int, float) and 0 <= insight["score"] <= 1, insight
 assert error.get("error"), error
+report = json.loads((outputs / "evaluation" / "evaluation.json").read_text())
+metrics = report["multiclass_classification_metrics"]
+assert report["modelVersion"] == "ci-smoke" and report["billing_test_count"] > 0, report
+assert all(0 <= metrics[key]["value"] <= 1 for key in ("accuracy", "billing_recall")), metrics
 print("Container contract passed: health, versioned inference, and HTTP 400 for malformed input.")
 PY

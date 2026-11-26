@@ -4,27 +4,23 @@ This lab separates preparing a model from promoting it. GitHub Actions runs the 
 
 ```mermaid
 flowchart LR
-    A[Build and test the containers] --> B[Train and publish model artifacts]
-    B --> C[Register a pending package]
+    A[Build and test the containers] --> B[Train and evaluate in SageMaker Pipelines]
+    B -->|Pass the quality gate| C[Register a pending package]
     C --> D[Review the evaluation]
     D -->|Approve| E[Promote the registered package]
     D -->|Hold or reject| F[Leave the endpoint as it is]
     E --> G[Verify the version at the endpoint]
 ```
 
-## Prepare one candidate
+## Start with a pipeline candidate
 
-Follow the [deployment playbook](deployment-demo-playbook.md) preflight. Use a fresh release version because the ECR tags are immutable.
+Run the [native pipeline lab](sagemaker-pipeline.md) first. Its passing branch creates a versioned package as `PendingManualApproval` and links the evaluation report. Use the ARN from the `RegisterCandidate` step.
 
-```bash
-bash scripts/deploy.sh phase1-registry-v1 --cloud-train --register-only
-```
-
-For a locally trained candidate, activate the Python environment and omit `--cloud-train`. Both commands create or reuse the assets stack and a separate registry stack named `<workshop-stack>-registry`. The registry stack creates the Model Package Group. The script prints the exact model package ARN, which starts as `PendingManualApproval`. The package records the model S3 archive URI, serving image digest, registered endpoint instance type, and release version. This step leaves endpoint creation or promotion to the approved-deploy command.
+For a registry-only fallback, activate the Python environment and run `bash scripts/deploy.sh phase1-registry-v1 --register-only` to train locally and prepare a package.
 
 ## Review and approve the package
 
-Set `package_arn` to the full versioned ARN printed by registration:
+Set `package_arn` to the full versioned ARN from the pipeline registration step:
 
 ```bash
 package_arn='<versioned model package ARN>'
@@ -36,7 +32,7 @@ bash scripts/deploy-approved.sh "$package_arn"
 
 Expect the deploy command to exit `3` while the package awaits approval. It stops before any serving stack changes. Wait until `ModelPackageStatus` reports `Completed` before continuing.
 
-Review the container checks and training evaluation. Managed training prints the report to the training job's CloudWatch logs. For this sandbox exercise, approve after reviewing the report and confirming the serving contract. A production gate would require adequate independent test data and a meaningful target for billing recall. The workshop dataset's billing test split is too small for that release decision.
+Review the container checks and the [evaluation report](sagemaker-pipeline.md#inspect-the-report-and-package) from the Processing step. For this sandbox exercise, approve after reviewing the report and confirming the serving contract. A production gate would require adequate independent test data and a meaningful target for billing recall. The workshop dataset's billing test split is too small for that release decision.
 
 ```bash
 aws sagemaker update-model-package \
@@ -51,7 +47,7 @@ One person can drive the AWS steps and another can verify the output. The useful
 
 ## GitHub Actions setup
 
-[Workshop CI](../.github/workflows/ci.yml) builds the training and serving images, trains in a local container on the runner, and checks health, versioned inference, and malformed input. It runs with GitHub read access and requires Docker rather than AWS credentials. You can run the same check locally:
+[Workshop CI](../.github/workflows/ci.yml) builds the training and serving images, trains and evaluates in local containers on the runner, and checks health, versioned inference, and malformed input. It runs with GitHub read access and requires Docker rather than AWS credentials. You can run the same check locally:
 
 ```bash
 bash scripts/smoke-containers.sh

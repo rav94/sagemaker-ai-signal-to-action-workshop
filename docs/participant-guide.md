@@ -4,7 +4,7 @@ Use the existing synthetic fixtures. Your instructor will share the endpoint nam
 
 ## 1. Trace the training artifact
 
-Follow the [managed training lab](cloud-training.md) using the instructor’s shared job name. Find the dataset URI, the training job status, and the output model URI. Match that output to the model attached to the endpoint. If your role only allows invocation, follow along as the instructor runs the inspection commands.
+Follow the [native pipeline lab](sagemaker-pipeline.md) using the instructor’s execution ARN. Find the training artifact, evaluation report, and approved model package. Match the package’s release version to the endpoint response. If your role only allows invocation, follow along as the instructor runs the inspection commands.
 
 ## 2. Get an insight
 

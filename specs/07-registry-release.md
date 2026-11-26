@@ -2,6 +2,8 @@
 
 ## Registration
 
+The main [pipeline flow](../docs/sagemaker-pipeline.md) trains, evaluates held-out data in a Processing job, and registers a package only if the billing recall meets the execution's `MinimumBillingRecall`. The package links the evaluation report. The commands below describe the registry-only fallback.
+
 - `scripts/deploy.sh RELEASE --cloud-train --register-only` publishes the training and serving images, runs managed training, and registers the artifact. Omitting `--cloud-train` uses local training.
 - `registry.yaml` creates the workshop Model Package Group in the separate `<workshop-stack>-registry` stack.
 - The package starts in `PendingManualApproval`. It captures the S3 model URI, ECR serving image digest, supported response and request format, serving instance type, and release version.
