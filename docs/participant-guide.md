@@ -1,6 +1,6 @@
 # Participant lab
 
-Use the existing synthetic fixtures. Your instructor will share the endpoint name, region, and invocation access. For a local session, use the [README quick start](../README.md#run-the-local-lab) and the same request fixtures.
+Follow the instructor during the live demo. To run the AWS lab later, use the repo root, AWS CLI v2 with credentials that can invoke the endpoint, and your instructor's Region and endpoint name. Python is needed for the routing exercise. To practice without an AWS endpoint, use the [local lab](../README.md#run-the-local-lab) with the same fixtures.
 
 ## 1. Trace the training artifact
 
@@ -10,7 +10,7 @@ Follow the [Studio walkthrough](deployment-demo-playbook.md#inspect-the-run-in-s
 
 ```bash
 mkdir -p artifacts
-endpoint="${WORKSHOP_STACK:-sagemaker-ai-signal-insight-action-workshop}"
+endpoint='sagemaker-ai-signal-insight-action-workshop' # Replace if your instructor shares a different name.
 aws sagemaker-runtime invoke-endpoint \
   --endpoint-name "$endpoint" \
   --content-type application/json \
@@ -18,7 +18,7 @@ aws sagemaker-runtime invoke-endpoint \
   cat artifacts/aws-billing-insight.json
 ```
 
-Find the category, score, and deployed version. Check that `modelVersion` matches the release your instructor deployed. Keep the billing result for the threshold exercise.
+Use the instructor's AWS Region for both invoke commands. Find the category, score, and deployed version. Check that `modelVersion` matches the release your instructor deployed. Keep the billing result for the threshold exercise.
 
 ## 3. Decide how to act
 

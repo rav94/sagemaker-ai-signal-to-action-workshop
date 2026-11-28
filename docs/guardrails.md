@@ -2,7 +2,7 @@
 
 Use the baseline SageMaker endpoint and the numbered guardrail version from the separately deployed [Bedrock workshop](https://github.com/rav94/ai-signal-insight-action-workshop). SageMaker's [deployment guardrails](architecture/README.md#bluegreen-rollout-and-rollback) protect endpoint updates. This exercise uses Bedrock Guardrails to check incoming content before calling the classifier.
 
-![The application checks the complaint with Bedrock and invokes SageMaker only when the check clears](architecture/bedrock-content-screening.png)
+![The application checks the complaint with Bedrock and invokes SageMaker only when the check clears](architecture/aws/bedrock-content-screening.png)
 
 ## Reference the Bedrock guardrail
 

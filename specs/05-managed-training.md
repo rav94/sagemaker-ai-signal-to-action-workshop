@@ -1,6 +1,6 @@
 # Managed training and evaluation contract
 
-Run `bash scripts/deploy.sh RELEASE` to provision Studio, publish the inputs, apply the assets, registry, and pipeline stacks, and start a SageMaker execution. The launcher returns the pipeline execution ARN. SageMaker orchestrates the steps in [the pipeline definition](../scripts/pipeline-definition.py).
+Run `bash scripts/deploy.sh RELEASE` to provision the assets and Studio stacks, publish the inputs, apply the Registry and Pipeline stacks, and start a SageMaker execution. The launcher returns the pipeline execution ARN. SageMaker orchestrates the steps in [the pipeline definition](../scripts/pipeline-definition.py).
 
 | Step | Inputs and outputs |
 |---|---|

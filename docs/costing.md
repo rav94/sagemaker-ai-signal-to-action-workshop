@@ -110,4 +110,4 @@ aws s3 rm "s3://$bucket" --recursive &&
   aws cloudformation wait stack-delete-complete --stack-name "${stack}-assets"
 ```
 
-CloudFormation removes the ECR repository and both images. The shared SageMaker training and Processing log groups follow the account’s log retention policy.
+CloudFormation removes the ECR repository and all workshop images it contains. The shared SageMaker training and Processing log groups follow the account’s log retention policy.

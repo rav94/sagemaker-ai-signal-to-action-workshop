@@ -15,7 +15,7 @@ docker buildx version
 
 - Check the independent quotas for training (`ml.t3.large`), Processing (`ml.t3.medium`), and real-time hosting (`ml.t2.medium`). Use `WORKSHOP_TRAINING_INSTANCE_TYPE`, `WORKSHOP_EVALUATION_INSTANCE_TYPE`, or `WORKSHOP_INSTANCE_TYPE` if a default has no quota. [AWS SageMaker quotas](https://docs.aws.amazon.com/general/latest/gr/sagemaker.html)
 - The teaching identity needs to provision the workshop's CloudFormation stacks, publish to S3 and ECR, start and inspect the pipeline, and open a Studio profile. Studio launch in IAM mode uses `sagemaker:CreatePresignedDomainUrl` on the profile. [AWS Studio launch guide](https://docs.aws.amazon.com/sagemaker/latest/dg/studio-updated-launch.html)
-- Rehearse with the [GitHub Actions workflow](model-registry-ci-cd.md#github-actions-setup) on the remote `main` branch.
+- Confirm the [GitHub Actions workflow](model-registry-ci-cd.md#github-actions-setup) is on the remote `main` branch. Set up its AWS role after the launcher creates the assets stack.
 
 ## Launch the workshop
 
@@ -37,19 +37,19 @@ In the SageMaker AI console, open **Domains**, choose the printed workshop domai
 |---|---|
 | `TrainModel` | The training job writes a versioned `model.tar.gz` to S3. |
 | `EvaluateModel` | The Processing job uses that archive, scores the 16 held-out rows, and writes `evaluation.json` to S3. After registration, view the report in the model version's **Evaluate → Model Quality** card in Studio. |
-| `CheckBillingRecall` | Compares the report's billing recall with the `MinimumBillingRecall` parameter, which defaults to `0.50`. |
+| `CheckBillingRecall` | Reads billing recall from `evaluation.json` and passes when it is at least `MinimumBillingRecall`, which defaults to `0.50`. |
 | `RegisterCandidate` | A pass produces a versioned `PendingManualApproval` package. Copy the exact package ARN. |
 | `RejectBelowThreshold` | A miss fails the execution before registration. |
 
-The local check found **13/16 correct overall** and **2/4 billing cases caught**. Use the live report for your run. Four billing cases are enough to illustrate the gate and too few to support a production release decision.
+The local check found **13/16 correct overall** and **2/4 actual billing cases caught**. Billing recall is `2 ÷ 4 = 0.50`, so this candidate meets the default gate exactly. Read the live report for your run. The gate controls registration. The inference score threshold controls routing for an individual complaint. Four billing cases are too few to support a production release decision.
 
 ## Deploy the baseline
 
 Model Registry is the handoff from model building to the separate production-style deployment workflow. GitHub Actions takes the exact approved package version and uses its registered assets. [Why separate build and deployment?](mlops.md#why-separate-model-building-and-deployment)
 
-1. [Find the versioned model package ARN](model-registry-ci-cd.md#find-the-model-package-arn) for the successful `RegisterCandidate` step and review the evaluation report.
-2. Confirm the package is `Completed`. In Studio, select **Approved** from the **Pending Approval** dropdown in the version's **Deploy** card. [Review and approve](model-registry-ci-cd.md#review-and-approve-the-package)
-3. For the first rehearsal, [run GitHub IAM setup and set repository variables](model-registry-ci-cd.md#github-actions-setup). Reuse this setup for later deployments.
+1. For the first rehearsal, [run GitHub IAM setup and set repository variables](model-registry-ci-cd.md#github-actions-setup). Reuse this setup for later deployments.
+2. [Find the versioned model package ARN](model-registry-ci-cd.md#find-the-model-package-arn) for the successful `RegisterCandidate` step.
+3. Confirm the package is `Completed` and review the evaluation report. In Studio, select **Approved** from the **Pending Approval** dropdown in the version's **Deploy** card. [Review and approve](model-registry-ci-cd.md#review-and-approve-the-package)
 4. In **GitHub Actions → Deploy approved SageMaker release → Run workflow**, select `main`, paste the ARN into `model_package_arn`, leave **`rollback_demo` unchecked**, and run the workflow.
 5. Open **Deploy and verify the approved model package** in the run log. Confirm the endpoint is `InService` and save the verified baseline `modelVersion` and approved ARN for the drill.
 

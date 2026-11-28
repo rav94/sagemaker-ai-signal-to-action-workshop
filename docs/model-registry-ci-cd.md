@@ -14,7 +14,7 @@ Use the [workshop launcher](deployment-demo-playbook.md#launch-the-workshop) to 
 
 The [GitHub deployment IAM template](../github-deploy-iam.yaml) references that provider and creates the deployment role for GitHub Actions and the execution role for SageMaker. The GitHub role can read the approved package, apply the serving stack, invoke the endpoint, and verify rollback. It can pass the execution role only to SageMaker. The execution role can load workshop model archives and serve both fleets during the rollback drill.
 
-Supply the exact OIDC subject for the repository that runs the workflow. This is the value for the instructor's repository:
+Supply the exact OIDC subject for the repository that runs the workflow. The instructor's repository uses the following subject. The numeric suffixes are the GitHub owner ID and repository ID.
 
 ```bash
 github_subject='repo:rav94@9110053/sagemaker-ai-signal-to-action-workshop@1470484524:ref:refs/heads/main'
@@ -67,14 +67,14 @@ The package ARN ends in `model-package/<workshop-stack>-registry/<version-number
 
 ## Review and approve the package
 
-Use the exact [versioned model package ARN](#find-the-model-package-arn) from your execution. In the Sagemaker AI console, Go to Model -> Custom Models -> Select the associated model and go to model version's **Evaluate → Model Quality** card in Studio to review the report. Confirm that the package is `Completed` and awaiting approval. Record its release version.
+In the workshop's Studio profile, open **Models → Custom models** and find **Registered models → Model Groups**. Open the `<workshop-stack>-registry` group and select the version at the end of the [package ARN from your run](#find-the-model-package-arn). Review **Evaluate → Model Quality**. The pipeline attaches the evaluation report to the package. Use the pipeline's `TrainModel` step to show the training job if the Registry version's **Train** card shows `Undefined`. Confirm that the package is `Completed` and awaiting approval. Record its `ReleaseVersion`.
 
 ```bash
 aws sagemaker describe-model-package --model-package-name "$package_arn" \
   --query '{Approval:ModelApprovalStatus,Status:ModelPackageStatus,Version:CustomerMetadataProperties.ReleaseVersion}'
 ```
 
-With the workshop's `workshop-instructor` profile, open the exact model version in Studio. In its **Deploy** card, open **Pending Approval** and choose **Approved**. The instructor Studio role can approve versions in the workshop group. You can also approve the same ARN with the teaching AWS CLI profile.
+In the version's **Deploy** card, open **Pending Approval** and choose **Approved**. This updates the Registry decision. The next step is manual dispatch in GitHub Actions. You can also approve the same ARN with the teaching AWS CLI profile.
 
 ```bash
 aws sagemaker update-model-package \
@@ -91,9 +91,9 @@ Deploy the first approved package and verify its `modelVersion`. Train and appro
 
 Dispatch **Deploy approved SageMaker release** with the second package ARN and check **rollback_demo**. The same workflow records the live baseline, sends probe requests during the update, and enables SageMaker's all-at-once blue/green policy. When the candidate is ready, SageMaker sends it 100% of traffic and keeps the baseline fleet available with a ten-minute fleet termination wait (`TerminationWaitInSeconds`). This gives CloudWatch time to publish and evaluate the candidate metrics.
 
-The candidate-specific CloudWatch `ModelLatency` alarm uses an intentionally low **1 µs** threshold so the probes can trigger the drill. In the workflow log, look for the alarm's `ALARM` transition, the restored baseline endpoint configuration, and a fresh response with the original `modelVersion`. The CloudFormation update is expected to fail and finish in `UPDATE_ROLLBACK_COMPLETE`. The workflow succeeds after it verifies that stack status, the alarm, and the restored endpoint. [Rollout diagram](architecture/README.md#bluegreen-rollout-and-rollback) · [AWS all-at-once rollout](https://docs.aws.amazon.com/sagemaker/latest/dg/deployment-guardrails-blue-green-all-at-once.html) · [AWS alarm configuration](https://docs.aws.amazon.com/sagemaker/latest/dg/deployment-guardrails-configuration.html)
+The serving stack creates the CloudWatch alarm for this drill. It watches the candidate's average `ModelLatency` over one 60-second period, scoped to the candidate's endpoint configuration. A period above **1 µs** breaches the alarm. Missing data does not breach it. The probes are ordinary valid requests that generate latency samples. In the workflow log, look for the alarm's `ALARM` transition, the restored baseline endpoint configuration, and a fresh response with the original `modelVersion`. The CloudFormation update is expected to fail and finish in `UPDATE_ROLLBACK_COMPLETE`. The workflow succeeds after it verifies that stack status, the alarm, and the restored endpoint. [Rollout diagram](architecture/README.md#bluegreen-rollout-and-rollback) · [AWS all-at-once rollout](https://docs.aws.amazon.com/sagemaker/latest/dg/deployment-guardrails-blue-green-all-at-once.html) · [AWS alarm configuration](https://docs.aws.amazon.com/sagemaker/latest/dg/deployment-guardrails-configuration.html)
 
-If the candidate finishes deploying without an alarm, the drill reports failure and the candidate can still be live. Check the serving `modelVersion`. To restore the original release, dispatch its approved ARN with `rollback_demo` unchecked.
+Probe output shows which release answered each sampled request. Use the alarm history and restored endpoint configuration to verify rollback. If the candidate finishes deploying without an alarm, the drill reports failure and the candidate can still be live. Check the serving `modelVersion`. To restore the original release, dispatch its approved ARN with `rollback_demo` unchecked.
 
 See [workshop cleanup](costing.md) for the registry stack and package versions.
 

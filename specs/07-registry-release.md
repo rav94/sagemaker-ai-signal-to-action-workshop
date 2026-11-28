@@ -22,7 +22,7 @@ The instructor reviews the evaluation and makes the release decision. The Studio
 ## Rollback drill
 
 - The same workflow can run a blue/green drill using a different approved package and an existing workshop endpoint in `InService`. The serving role retains access to the baseline archive while both fleets are present.
-- The deployment policy shifts all traffic at once and monitors the candidate's `ModelLatency` under the candidate endpoint configuration. It sets a ten-minute fleet termination wait for CloudWatch to evaluate the metric. Synthetic probes populate the metric. The drill threshold is 1 µs.
+- The deployment policy shifts all traffic at once and monitors the candidate's `ModelLatency` under the candidate endpoint configuration. The serving stack creates the drill alarm and sets a ten-minute fleet termination wait. Valid synthetic probes generate latency samples. The alarm breaches above 1 µs average latency in one 60-second period. Missing data is non-breaching.
 - Success requires a candidate alarm transition during the run, CloudFormation in `UPDATE_ROLLBACK_COMPLETE`, the original endpoint configuration back in `InService`, and a fresh response with the original `modelVersion`.
 
 ## Workflows

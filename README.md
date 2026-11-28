@@ -5,7 +5,7 @@ Train a complaint classifier on synthetic data, then take one candidate through 
 | Path | What you see |
 |---|---|
 | **Local practice** | Train the model, package it, serve it over HTTP, and route one prediction. |
-| **AWS release** | Use Studio to inspect a SageMaker Pipeline. Approve the passing package in Model Registry. Deploy and verify it through GitHub Actions. |
+| **AWS release** | Launch a SageMaker Pipeline, inspect it in Studio, approve the passing package in Model Registry, and deploy it through GitHub Actions. |
 
 ## Run the local lab
 
@@ -29,6 +29,8 @@ curl --fail-with-body -sS -H 'Content-Type: application/json' \
   cat artifacts/insight.json &&
   python src/action.py artifacts/insight.json --minimum-score 0.35
 ```
+
+The [training script](src/train.py) fits TF-IDF and logistic regression together using 48 of the 64 labeled complaints. TF-IDF turns words and two-word phrases into numerical features. The classifier learns how those features relate to the four categories. The remaining 16 examples are held out for evaluation. The same fitted pair goes into the local archive and the SageMaker training artifact.
 
 The complaint is the **signal**. The predicted category, score, and version are the **insight**. The routing CLI applies a threshold to simulate the **action**. Try the same result with `--minimum-score 0.60` to see when a complaint goes to review.
 
@@ -61,7 +63,7 @@ Build a second candidate with a fresh release label:
 bash scripts/deploy.sh phase1-rollout-v2
 ```
 
-Approve the second package in Model Registry. Run **Deploy approved SageMaker release** again with the new ARN and **`rollback_demo` checked**. SageMaker shifts all traffic to the candidate while retaining the baseline fleet. The workflow sends probes to trigger the latency alarm, then verifies that the endpoint serves the baseline `modelVersion` again. [Rollout steps and expected logs](docs/deployment-demo-playbook.md#demonstrate-bluegreen-rollback)
+Approve the second package in Model Registry. Run **Deploy approved SageMaker release** again with the new ARN and **`rollback_demo` checked**. SageMaker shifts all traffic to the candidate while retaining the baseline fleet. The workflow sends probes to generate latency metrics and checks that the candidate alarm fired and the endpoint returned to the baseline `modelVersion`. [Rollout steps and expected logs](docs/deployment-demo-playbook.md#demonstrate-bluegreen-rollback)
 
 [Architecture](docs/architecture/README.md) · [Instructor guide](docs/instructor-guide.md) · [Troubleshooting](docs/troubleshooting.md) · [Cost and cleanup](docs/costing.md)
 
