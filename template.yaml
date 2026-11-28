@@ -157,8 +157,8 @@ Resources:
           BlueGreenUpdatePolicy:
             TrafficRoutingConfiguration:
               Type: ALL_AT_ONCE
-              WaitIntervalInSeconds: 300
-            TerminationWaitInSeconds: 0
+              WaitIntervalInSeconds: 0
+            TerminationWaitInSeconds: 600
             MaximumExecutionTimeoutInSeconds: 1800
         - !Ref AWS::NoValue
 Outputs:

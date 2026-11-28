@@ -22,7 +22,7 @@ The instructor reviews the evaluation and makes the release decision. The Studio
 ## Rollback drill
 
 - The same workflow can run a blue/green drill using a different approved package and an existing workshop endpoint in `InService`. The serving role retains access to the baseline archive while both fleets are present.
-- The deployment policy shifts all traffic at once and monitors the candidate's `ModelLatency` under the candidate endpoint configuration for five minutes. Synthetic probes populate the metric. The drill threshold is 1 µs.
+- The deployment policy shifts all traffic at once and monitors the candidate's `ModelLatency` under the candidate endpoint configuration. It sets a ten-minute fleet termination wait for CloudWatch to evaluate the metric. Synthetic probes populate the metric. The drill threshold is 1 µs.
 - Success requires a candidate alarm transition during the run, CloudFormation in `UPDATE_ROLLBACK_COMPLETE`, the original endpoint configuration back in `InService`, and a fresh response with the original `modelVersion`.
 
 ## Workflows
@@ -31,6 +31,6 @@ The instructor reviews the evaluation and makes the release decision. The Studio
 - The deployment workflow is manually dispatched from `main` with the versioned ARN. It assumes the teaching AWS role via OIDC and delegates checks and deployment to `scripts/deploy-approved.sh`.
 - The [GitHub IAM setup script](../scripts/setup-github-iam.sh) creates or reuses the account's GitHub OIDC provider for `https://token.actions.githubusercontent.com` and ensures the `sts.amazonaws.com` audience is enabled. The provider remains in account IAM when the workshop stack is deleted.
 - The [GitHub deployment IAM stack](../github-deploy-iam.yaml) uses the account's GitHub OIDC provider and requires the exact `GitHubOidcSubject` for the repository's `main` branch. Its output roles supply `AWS_DEPLOY_ROLE_ARN` and `AWS_MODEL_EXECUTION_ROLE_ARN`.
-- The GitHub role can pass the setup stack's serving execution role to SageMaker. Model and EndpointConfig creation and deletion use the workshop's `WorkshopStack` tag. The instructor identity retains model approval.
+- The GitHub role can pass the setup stack's serving execution role to SageMaker. Model and EndpointConfig creation and deletion use the workshop's `WorkshopStack` tag. Endpoint creation and updates authorize the named endpoint and the tagged configuration. The instructor identity retains model approval.
 
 The [Registry and CI/CD lab](../docs/model-registry-ci-cd.md) provides the approval command, GitHub dispatch, and OIDC setup.

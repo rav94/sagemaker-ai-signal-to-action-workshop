@@ -107,6 +107,7 @@ Resources:
                   - cloudformation:DescribeChangeSet
                   - cloudformation:ExecuteChangeSet
                   - cloudformation:DescribeStackEvents
+                  - cloudformation:GetTemplateSummary
                 Resource: !Sub 'arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${WorkshopStack}/*'
               - Effect: Allow
                 Action: iam:PassRole
@@ -125,6 +126,14 @@ Resources:
                   - sagemaker:DeleteTags
                   - sagemaker:ListTags
                 Resource: !Sub 'arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:endpoint/${WorkshopStack}'
+              - Effect: Allow
+                Action:
+                  - sagemaker:CreateEndpoint
+                  - sagemaker:UpdateEndpoint
+                Resource: !Sub 'arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:endpoint-config/*'
+                Condition:
+                  StringEquals:
+                    aws:ResourceTag/WorkshopStack: !Ref WorkshopStack
               - Effect: Allow
                 Action:
                   - sagemaker:CreateModel

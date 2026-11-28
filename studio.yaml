@@ -145,6 +145,47 @@ Resources:
               StringEquals:
                 sagemaker:ModelApprovalStatus: Approved
 
+  StudioEndpointInspection:
+    Type: AWS::IAM::RolePolicy
+    Properties:
+      RoleName: !Ref StudioRole
+      PolicyName: WorkshopStudioEndpointInspection
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action: sagemaker:ListEndpoints
+            Resource: '*'
+            Condition:
+              StringEquals:
+                aws:RequestedRegion: !Ref AWS::Region
+          - Effect: Allow
+            Action:
+              - sagemaker:DescribeEndpoint
+              - sagemaker:InvokeEndpoint
+              - sagemaker:ListTags
+            Resource: !Sub 'arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:endpoint/${WorkshopStackName}'
+          - Effect: Allow
+            Action:
+              - sagemaker:DescribeEndpointConfig
+              - sagemaker:DescribeModel
+              - sagemaker:ListTags
+            Resource:
+              - !Sub 'arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:endpoint-config/*'
+              - !Sub 'arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:model/*'
+            Condition:
+              StringEquals:
+                aws:ResourceTag/WorkshopStack: !Ref WorkshopStackName
+          - Effect: Allow
+            Action:
+              - application-autoscaling:DescribeScalableTargets
+              - application-autoscaling:DescribeScalingPolicies
+              - application-autoscaling:DescribeScalingActivities
+            Resource: '*'
+            Condition:
+              StringEquals:
+                aws:RequestedRegion: !Ref AWS::Region
+
 Outputs:
   DomainId:
     Value: !GetAtt StudioDomain.DomainId

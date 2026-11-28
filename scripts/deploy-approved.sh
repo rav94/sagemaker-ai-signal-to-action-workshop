@@ -54,16 +54,45 @@ fi
 printf 'Approved package: %s\nServing image: %s\nModel artifact: %s\n' "$package_arn" "$image_uri" "$model_uri"
 artifact_key="${model_uri#s3://"$bucket"/}"
 
+watch_stack_status() {
+  local status previous=""
+  while :; do
+    if status=$(aws cloudformation describe-stacks --stack-name "$stack" \
+        --cli-connect-timeout 5 --cli-read-timeout 5 --query 'Stacks[0].StackStatus' \
+        --output text 2>/dev/null) && [[ -n "$status" && "$status" != "$previous" ]]; then
+      printf 'CloudFormation stack status: %s\n' "$status" >&2
+      previous="$status"
+    fi
+    sleep 10 </dev/null >/dev/null 2>&1
+  done
+}
+
+stop_stack_watch() {
+  if [[ -n "$stack_watch_pid" ]]; then
+    kill "$stack_watch_pid" 2>/dev/null || true
+    wait "$stack_watch_pid" 2>/dev/null || true
+    stack_watch_pid=""
+  fi
+}
+
 deploy_endpoint() {
+  local deploy_status=0
+  if [[ "${GITHUB_ACTIONS:-}" == true ]]; then
+    watch_stack_status &
+    stack_watch_pid=$!
+  fi
   aws cloudformation deploy --template-file template.yaml --stack-name "$stack" \
     --capabilities CAPABILITY_IAM --no-fail-on-empty-changeset \
     --parameter-overrides "ArtifactBucket=$bucket" "ArtifactKey=$artifact_key" \
     "ImageUri=$image_uri" "ImageRepositoryName=${repository_uri#*/}" "InstanceType=$instance_type" \
-    "ExistingModelExecutionRoleArn=${AWS_MODEL_EXECUTION_ROLE_ARN:-}" "$@"
+    "ExistingModelExecutionRoleArn=${AWS_MODEL_EXECUTION_ROLE_ARN:-}" "$@" || deploy_status=$?
+  stop_stack_watch
+  return "$deploy_status"
 }
 
 scratch=$(mktemp -d "${TMPDIR:-/tmp}/workshop-approved.XXXXXX")
 probe_pid=""
+stack_watch_pid=""
 stop_probes() {
   if [[ -n "$probe_pid" ]]; then
     kill "$probe_pid" 2>/dev/null || true
@@ -72,6 +101,7 @@ stop_probes() {
   fi
 }
 cleanup() {
+  stop_stack_watch
   stop_probes
   rm -rf -- "$scratch"
 }
@@ -99,7 +129,12 @@ PY
 }
 
 if [[ "${WORKSHOP_ROLLBACK_DEMO:-false}" != true ]]; then
-  deploy_endpoint EnableDeploymentGuardrails=false RollbackArtifactKey=
+  deploy_endpoint EnableDeploymentGuardrails=false RollbackArtifactKey= || {
+    aws cloudformation describe-stack-events --stack-name "$stack" --max-items 30 \
+      --query "StackEvents[?ResourceStatus=='CREATE_FAILED' || ResourceStatus=='UPDATE_FAILED'].[LogicalResourceId,ResourceStatus,ResourceStatusReason]" \
+      --output table || true
+    exit 1
+  }
   aws sagemaker describe-endpoint --endpoint-name "$stack" \
     --query '{Endpoint:EndpointName,Status:EndpointStatus}' --output table
   verify_release "$version"
@@ -131,6 +166,12 @@ if [[ ! "$baseline_version" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,120}$ || "$baseline_
 fi
 
 alarm="$stack-candidate-model-latency"
+alarm_count=$(aws cloudwatch describe-alarms --alarm-names "$alarm" \
+  --query 'length(MetricAlarms)' --output text)
+if [[ "$alarm_count" != 0 ]]; then
+  echo "Rollback drill requires a fresh candidate alarm. Deploy the approved baseline with rollback_demo unchecked first." >&2
+  exit 2
+fi
 started=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 alarm_history() {
   aws cloudwatch describe-alarm-history --alarm-name "$alarm" --history-item-type StateUpdate \
@@ -160,7 +201,11 @@ deployment_status=0
 deploy_endpoint EnableDeploymentGuardrails=true "RollbackArtifactKey=$baseline_key" || deployment_status=$?
 stop_probes
 if [[ "$deployment_status" == 0 ]]; then
-  echo "Rollback drill failed: the endpoint update completed. Check the alarm and endpoint before continuing." >&2
+  echo "Rollback drill failed: the endpoint update completed without a verified rollback." >&2
+  aws cloudwatch describe-alarms --alarm-names "$alarm" \
+    --query 'MetricAlarms[].{State:StateValue,Updated:StateUpdatedTimestamp,Reason:StateReason}' \
+    --output json >&2 || true
+  printf 'Current endpoint status and config: %s\n' "$(endpoint_state)" >&2
   exit 1
 fi
 
@@ -180,16 +225,15 @@ else:
     raise SystemExit("Rollback drill could not verify a candidate latency alarm during this run.")
 PY
 
-aws sagemaker wait endpoint-in-service --endpoint-name "$stack"
-if [[ "$(endpoint_state)" != "$baseline_state" ]]; then
-  echo "Rollback drill failed: the endpoint configuration did not return to the baseline." >&2
-  exit 1
-fi
-verify_release "$baseline_version"
 stack_status=$(aws cloudformation describe-stacks --stack-name "$stack" \
   --query 'Stacks[0].StackStatus' --output text)
 if [[ "$stack_status" != UPDATE_ROLLBACK_COMPLETE ]]; then
-  printf 'The baseline serves again, but the stack needs attention. Stack status: %s\n' "$stack_status" >&2
+  printf 'Rollback drill failed: expected UPDATE_ROLLBACK_COMPLETE, found %s.\n' "$stack_status" >&2
   exit 1
 fi
+if [[ "$(endpoint_state)" != "$baseline_state" ]]; then
+  echo "Rollback drill failed: the endpoint configuration did not return to the baseline in service." >&2
+  exit 1
+fi
+verify_release "$baseline_version"
 printf 'Rollback verified: %s is InService on %s and returned %s.\n' "$stack" "$baseline_config" "$baseline_version"

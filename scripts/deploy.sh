@@ -48,12 +48,20 @@ aws cloudformation deploy --template-file studio.yaml --stack-name "$studio_stac
 aws ecr get-login-password | docker login --username AWS --password-stdin "${repository_uri%%/*}"
 
 publish_image() {
-  local target="$1" tag="$2" digest
-  docker build --platform linux/amd64 --provenance=false --sbom=false \
-    --target "$target" -t "$repository_uri:$tag" . >&2 || return
-  docker push "$repository_uri:$tag" >&2 || return
-  digest=$(aws ecr describe-images --repository-name "$repository_name" \
-    --image-ids "imageTag=$tag" --query 'imageDetails[0].imageDigest' --output text) || return
+  local target="$1" tag="$2" details digest media_type
+  # ECR serves the stored manifest as-is when SageMaker pulls by digest.
+  docker buildx build --platform linux/amd64 --provenance=false --sbom=false \
+    --target "$target" --tag "$repository_uri:$tag" \
+    --output type=registry,oci-mediatypes=false . >&2 || return
+  details=$(aws ecr describe-images --repository-name "$repository_name" \
+    --image-ids "imageTag=$tag" --query 'imageDetails[0].[imageDigest,imageManifestMediaType]' \
+    --output text) || return
+  IFS=$'\t' read -r digest media_type <<< "$details"
+  if [[ ! "$digest" =~ ^sha256:[0-9a-f]{64}$ || "$media_type" != application/vnd.docker.distribution.manifest.v2+json ]]; then
+    printf 'Unexpected ECR manifest for %s (%s, %s). Rebuild with a fresh release label.\n' \
+      "$tag" "$digest" "$media_type" >&2
+    return 1
+  fi
   printf '%s@%s\n' "$repository_uri" "$digest"
 }
 training_image=$(publish_image training "train-$version")

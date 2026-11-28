@@ -42,7 +42,7 @@ The [rollback drill](../model-registry-ci-cd.md#demonstrate-rollback) uses a sec
 |---|---|
 | [Assets stack](../../bootstrap.yaml) | S3 artifact bucket, immutable-tag ECR repository, and job role for training and evaluation. |
 | [Pipeline stack](../../pipeline.yaml) | SageMaker Pipeline and orchestration role. The role starts and inspects training and Processing jobs, passes the job role, reads step outputs, and registers model packages. |
-| [Studio stack](../../studio.yaml) | Dedicated inspection domain, instructor profile, execution role, VPC, and subnets. The instructor can open the pipeline graph, read evaluation reports from the workshop assets bucket, and approve versions in the workshop Registry group. |
+| [Studio stack](../../studio.yaml) | Dedicated inspection domain, instructor profile, execution role, VPC, and subnets. The instructor can open the pipeline graph, read evaluation reports from the workshop assets bucket, approve versions in the workshop Registry group, and inspect the workshop endpoint and its tagged configuration and model. |
 | [Registry stack](../../registry.yaml) | Workshop Model Package Group. Pipeline executions create individual package versions. |
 | [Account IAM](../model-registry-ci-cd.md#set-up-aws-access-once) | The setup script creates or reuses the shared GitHub OIDC provider with audience `sts.amazonaws.com`. The provider's lifecycle is independent of the workshop stacks. |
 | [GitHub deployment IAM stack](../../github-deploy-iam.yaml) | Trusts the exact GitHub repository subject on `main` through the account OIDC provider. Creates the GitHub deployment role and the execution role it can pass to SageMaker. |

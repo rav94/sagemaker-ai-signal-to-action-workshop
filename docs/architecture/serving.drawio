@@ -234,7 +234,7 @@
         <mxCell id="candidate" value="&lt;b&gt;Update serves candidate&lt;/b&gt;&lt;br&gt;Same endpoint, new configuration&lt;br&gt;All traffic shifts to v2" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=#e6f4ef;strokeColor=#327d67;strokeWidth=1.5;fontColor=#26384d;fontSize=14;" vertex="1" parent="1">
           <mxGeometry as="geometry" x="350" y="148" width="227" height="86" />
         </mxCell>
-        <mxCell id="alarm" value="&lt;b&gt;CloudWatch watches v2&lt;/b&gt;&lt;br&gt;ModelLatency for candidate config&lt;br&gt;Five-minute monitoring window" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=#f4f6f9;strokeColor=#66758b;strokeWidth=1.5;fontColor=#26384d;fontSize=14;" vertex="1" parent="1">
+        <mxCell id="alarm" value="&lt;b&gt;CloudWatch watches v2&lt;/b&gt;&lt;br&gt;ModelLatency for candidate config&lt;br&gt;Ten-minute fleet termination wait" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=#f4f6f9;strokeColor=#66758b;strokeWidth=1.5;fontColor=#26384d;fontSize=14;" vertex="1" parent="1">
           <mxGeometry as="geometry" x="671" y="148" width="228" height="86" />
         </mxCell>
         <mxCell id="promote" value="&lt;b&gt;Keep candidate&lt;/b&gt;&lt;br&gt;Endpoint continues serving v2" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=#e6f4ef;strokeColor=#327d67;strokeWidth=1.5;fontColor=#26384d;fontSize=14;" vertex="1" parent="1">

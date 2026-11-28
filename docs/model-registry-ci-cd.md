@@ -67,7 +67,7 @@ The package ARN ends in `model-package/<workshop-stack>-registry/<version-number
 
 ## Review and approve the package
 
-Use the exact [versioned model package ARN](#find-the-model-package-arn) from your execution. Open the model version's **Evaluate → Model Quality** card in Studio to review the report. Confirm that the package is `Completed` and awaiting approval. Record its release version.
+Use the exact [versioned model package ARN](#find-the-model-package-arn) from your execution. In the Sagemaker AI console, Go to Model -> Custom Models -> Select the associated model and go to model version's **Evaluate → Model Quality** card in Studio to review the report. Confirm that the package is `Completed` and awaiting approval. Record its release version.
 
 ```bash
 aws sagemaker describe-model-package --model-package-name "$package_arn" \
@@ -87,9 +87,9 @@ For the first endpoint deployment, run the workflow from GitHub Actions. Open **
 
 ## Demonstrate rollback
 
-Deploy the first approved package and verify its `modelVersion`. Train and approve a second release with a fresh label, such as `phase1-rollout-v2`, using the [same AWS walkthrough](deployment-demo-playbook.md). Check the hosting quota for both fleets to run at once.
+Deploy the first approved package and verify its `modelVersion`. Train and approve a second release with a fresh label, such as `phase1-rollout-v2`, using the [same AWS walkthrough](deployment-demo-playbook.md). Check the hosting quota for both fleets to run at once. The drill requires the previous candidate alarm to be absent. If a drill left that alarm behind, deploy the approved baseline with `rollback_demo` unchecked so CloudFormation removes it.
 
-Dispatch **Deploy approved SageMaker release** with the second package ARN and check **rollback_demo**. The same workflow records the live baseline, sends probe requests during the update, and enables SageMaker's all-at-once blue/green policy. When the candidate is ready, SageMaker sends it 100% of traffic and keeps the baseline fleet available during a five-minute monitoring window.
+Dispatch **Deploy approved SageMaker release** with the second package ARN and check **rollback_demo**. The same workflow records the live baseline, sends probe requests during the update, and enables SageMaker's all-at-once blue/green policy. When the candidate is ready, SageMaker sends it 100% of traffic and keeps the baseline fleet available with a ten-minute fleet termination wait (`TerminationWaitInSeconds`). This gives CloudWatch time to publish and evaluate the candidate metrics.
 
 The candidate-specific CloudWatch `ModelLatency` alarm uses an intentionally low **1 µs** threshold so the probes can trigger the drill. In the workflow log, look for the alarm's `ALARM` transition, the restored baseline endpoint configuration, and a fresh response with the original `modelVersion`. The CloudFormation update is expected to fail and finish in `UPDATE_ROLLBACK_COMPLETE`. The workflow succeeds after it verifies that stack status, the alarm, and the restored endpoint. [Rollout diagram](architecture/README.md#bluegreen-rollout-and-rollback) · [AWS all-at-once rollout](https://docs.aws.amazon.com/sagemaker/latest/dg/deployment-guardrails-blue-green-all-at-once.html) · [AWS alarm configuration](https://docs.aws.amazon.com/sagemaker/latest/dg/deployment-guardrails-configuration.html)
 
