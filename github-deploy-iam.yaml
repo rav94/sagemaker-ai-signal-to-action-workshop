@@ -63,7 +63,8 @@ Resources:
                 Resource: !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/sagemaker/Endpoints/${WorkshopStack}:*'
               - Effect: Allow
                 Action: cloudwatch:DescribeAlarms
-                Resource: !Sub 'arn:${AWS::Partition}:cloudwatch:${AWS::Region}:${AWS::AccountId}:alarm:${WorkshopStack}-candidate-model-latency'
+                # SageMaker queries alarms without a resource name during guarded updates.
+                Resource: !Sub 'arn:${AWS::Partition}:cloudwatch:${AWS::Region}:${AWS::AccountId}:alarm:*'
               - Effect: Allow
                 Action: cloudwatch:PutMetricData
                 Resource: '*'

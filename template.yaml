@@ -63,7 +63,7 @@ Resources:
                 - GuardedRelease
                 - Effect: Allow
                   Action: cloudwatch:DescribeAlarms
-                  Resource: !Sub 'arn:${AWS::Partition}:cloudwatch:${AWS::Region}:${AWS::AccountId}:alarm:${AWS::StackName}-candidate-model-latency'
+                  Resource: !Sub 'arn:${AWS::Partition}:cloudwatch:${AWS::Region}:${AWS::AccountId}:alarm:*'
                 - !Ref AWS::NoValue
               - Effect: Allow
                 Action: s3:ListBucket
