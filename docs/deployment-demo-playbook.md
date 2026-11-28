@@ -1,43 +1,72 @@
-# Deployment demo playbook
+# AWS deployment walkthrough
 
 ## Preflight
 
-Use AWS CLI v2, Docker with Linux AMD64 build support, and a teaching sandbox. For the local training exercise or local-artifact fallback, activate the Python 3.13 environment from the [README](../README.md).
-
-- Confirm that the AWS profile resolves to the intended account and region.
-- Check separate quotas for training (`ml.t3.large`), evaluation Processing (`ml.t3.medium`), and real-time hosting (`ml.t2.medium`).
-- The instructor role needs to publish to ECR and S3, deploy the workshop stacks, pass the pipeline and job roles, and start and inspect the pipeline execution. Participant roles can be limited to inspection and inference.
+Use AWS CLI v2, Docker with Linux AMD64 build support, and Python 3.13. Use your teaching AWS profile and keep the same account and Region in the CLI, Studio, and GitHub Actions. The launcher checks the account before provisioning. If the values are already loaded, keep them.
 
 ```bash
-export AWS_PROFILE="your-teaching-profile"
+export AWS_PROFILE=your-teaching-profile
 export AWS_REGION=us-east-1
-aws sts get-caller-identity
-# After confirming the account above, replace this example ID.
 export WORKSHOP_ACCOUNT_ID=123456789012
+aws sts get-caller-identity
 docker info --format '{{.ServerVersion}}'
 ```
 
-Replace the example profile, region, and account ID with the approved sandbox settings. Set `WORKSHOP_STACK` only if you need a distinct endpoint and stack name. The script checks the caller account before it provisions resources.
+- Check the independent quotas for training (`ml.t3.large`), Processing (`ml.t3.medium`), and real-time hosting (`ml.t2.medium`). Use `WORKSHOP_TRAINING_INSTANCE_TYPE`, `WORKSHOP_EVALUATION_INSTANCE_TYPE`, or `WORKSHOP_INSTANCE_TYPE` if a default has no quota. [AWS SageMaker quotas](https://docs.aws.amazon.com/general/latest/gr/sagemaker.html)
+- The teaching identity needs to provision the workshop's CloudFormation stacks, publish to S3 and ECR, start and inspect the pipeline, and open a Studio profile. Studio launch in IAM mode uses `sagemaker:CreatePresignedDomainUrl` on the profile. [AWS Studio launch guide](https://docs.aws.amazon.com/sagemaker/latest/dg/studio-updated-launch.html)
+- Rehearse with the [GitHub Actions workflow](model-registry-ci-cd.md#github-actions-setup) on the remote `main` branch.
 
-## Run the pipeline and promote a model
+## Launch the workshop
 
-1. Start the [native SageMaker Pipeline](sagemaker-pipeline.md) and inspect the training output, evaluation report, and gate.
-2. Review the pending candidate in the [Registry lab](model-registry-ci-cd.md). Demonstrate the blocked promotion, approve it, then deploy through GitHub Actions or the terminal.
-3. Verify `InService` and the release version using the [participant fixtures](participant-guide.md).
-
-Before the [guardrails lab](guardrails.md), record the baseline endpoint configuration and check quota for overlapping fleets. Use the [direct training walkthrough](cloud-training.md) if you want to inspect each training API call separately.
-
-## Rehearse with local training
-
-If the training quota or preparation time blocks the managed run, use the local-artifact path with the same AWS settings:
+Use a fresh release label if you have already published images for `phase1-pipeline-v1`. ECR tags are immutable.
 
 ```bash
-source .venv/bin/activate
-bash scripts/deploy.sh phase1-local-v1
+bash scripts/deploy.sh phase1-pipeline-v1
 ```
 
-This mode trains locally, uploads the resulting model archive, and publishes the serving image. Use the same invocation exercises. For the Studio walkthrough, use a completed pipeline execution from rehearsal if you have one.
+The launcher provisions the dedicated Studio domain and profile, publishes the versioned S3 and ECR inputs, creates or updates the native pipeline, and starts an execution. The command prints the Studio domain, profile, pipeline name, and execution ARN.
 
-After class, [delete the endpoint and assets stacks](costing.md).
+The Studio workspace provides the graph and Registry metadata. A passing execution ends at candidate registration. You deploy the endpoint in the GitHub Actions step after approval.
 
-[AWS SageMaker quotas](https://docs.aws.amazon.com/general/latest/gr/sagemaker.html) · [AWS real-time deployment](https://docs.aws.amazon.com/sagemaker/latest/dg/realtime-endpoints-deploy-models.html)
+## Inspect the run in Studio
+
+In the SageMaker AI console, open **Domains**, choose the printed workshop domain, then **Open Studio → workshop-instructor → Launch personal Studio**. In Studio, open **Pipelines → your workshop pipeline → Executions** and select the run. [AWS execution graph guide](https://docs.aws.amazon.com/sagemaker/latest/dg/pipelines-studio-view-execution.html)
+
+| Step | Evidence to inspect |
+|---|---|
+| `TrainModel` | The training job writes a versioned `model.tar.gz` to S3. |
+| `EvaluateModel` | The Processing job uses that archive, scores the 16 held-out rows, and writes `evaluation.json` to S3. After registration, view the report in the model version's **Evaluate → Model Quality** card in Studio. |
+| `CheckBillingRecall` | Compares the report's billing recall with the `MinimumBillingRecall` parameter, which defaults to `0.50`. |
+| `RegisterCandidate` | A pass produces a versioned `PendingManualApproval` package. Copy the exact package ARN. |
+| `RejectBelowThreshold` | A miss fails the execution before registration. |
+
+The local check found **13/16 correct overall** and **2/4 billing cases caught**. Use the live report for your run. Four billing cases are enough to illustrate the gate and too few to support a production release decision.
+
+## Deploy the baseline
+
+Model Registry is the handoff from model building to the separate production-style deployment workflow. GitHub Actions takes the exact approved package version and uses its registered assets. [Why separate build and deployment?](mlops.md#why-separate-model-building-and-deployment)
+
+1. [Find the versioned model package ARN](model-registry-ci-cd.md#find-the-model-package-arn) for the successful `RegisterCandidate` step and review the evaluation report.
+2. Confirm the package is `Completed`. In Studio, select **Approved** from the **Pending Approval** dropdown in the version's **Deploy** card. [Review and approve](model-registry-ci-cd.md#review-and-approve-the-package)
+3. For the first rehearsal, [run GitHub IAM setup and set repository variables](model-registry-ci-cd.md#github-actions-setup). Reuse this setup for later deployments.
+4. In **GitHub Actions → Deploy approved SageMaker release → Run workflow**, select `main`, paste the ARN into `model_package_arn`, leave **`rollback_demo` unchecked**, and run the workflow.
+5. Open **Deploy and verify the approved model package** in the run log. Confirm the endpoint is `InService` and save the verified baseline `modelVersion` and approved ARN for the drill.
+
+## Screen a complaint before inference
+
+With the baseline endpoint `InService`, run the [content screening lab](guardrails.md) using the guardrail ID and published version from the separate Bedrock workshop. Show one complaint that reaches SageMaker and one that the caller stops after the content check.
+
+## Demonstrate blue/green rollback
+
+Keep the baseline endpoint running. Check real-time hosting quota for both fleets to overlap, and verify the [deployment role can manage and read the CloudWatch alarm](model-registry-ci-cd.md#github-actions-setup).
+
+```bash
+bash scripts/deploy.sh phase1-rollout-v2
+```
+
+1. Open the second execution in Studio. After it passes the gate, copy the new `RegisterCandidate` package ARN and approve it the same way as the baseline.
+2. Run **Deploy approved SageMaker release** again on `main`. Paste the second ARN into `model_package_arn` and check **`rollback_demo`**.
+3. In the run log, find **Baseline modelVersion**, **Candidate modelVersion**, and the latency alarm name. SageMaker shifts **100% of traffic** to the candidate. The workflow sends probes while the baseline fleet stays available during the five-minute monitoring window.
+4. Show that the candidate alarm entered `ALARM`, CloudFormation reached `UPDATE_ROLLBACK_COMPLETE`, and the original configuration is back in `InService`. The workflow prints **Rollback verified** after a fresh inference returns the baseline `modelVersion`.
+
+The CloudFormation update failure is expected in a successful drill. The workflow reports success after it verifies the alarm, completed stack rollback, and restored baseline. [Rollback diagram](architecture/README.md#bluegreen-rollout-and-rollback) · [Troubleshooting](troubleshooting.md) · [Cleanup](costing.md#delete-after-the-final-invocation)

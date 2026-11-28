@@ -48,6 +48,9 @@ Resources:
                   - sagemaker:AddTags
                 Resource: !Sub 'arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:processing-job/*'
               - Effect: Allow
+                Action: sagemaker:CreateModelPackageGroup
+                Resource: !Sub 'arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:model-package-group/${PackageGroup}'
+              - Effect: Allow
                 Action:
                   - sagemaker:CreateModelPackage
                   - sagemaker:DescribeModelPackage

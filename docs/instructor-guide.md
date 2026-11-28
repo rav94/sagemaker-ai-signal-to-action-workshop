@@ -2,23 +2,18 @@
 
 ## Before class
 
-- Confirm the teaching account and the training, Processing, and endpoint quotas.
-- Pre-stage a [completed pipeline execution](sagemaker-pipeline.md) and its evaluation report. A completed failed-gate execution is optional.
-- Deploy one shared endpoint and check that it is `InService`. Run the normal, ambiguous, and malformed fixtures using the participant identity.
-- Save a normal response and a rejected invocation for fallback. Verify the local README path.
-- Pre-stage a pending model package and rehearse the [registry and CI/CD lab](model-registry-ci-cd.md). Record the blocked promotion and the approved release's version.
-- Rehearse the guarded endpoint update and the standalone content check. Capture the alarm and restored baseline version, and verify the allowed and screened-out requests.
-- Open the [training and inference diagrams](architecture/README.md), the training job logs, endpoint metrics, and the Bedrock companion repo.
+- Run the GitHub IAM setup to configure the account's OIDC provider and deploy the workshop roles. Copy the stack outputs into the repository variables. Confirm the workflow can assume the role. [GitHub Actions setup](model-registry-ci-cd.md#github-actions-setup)
+- Rehearse the [AWS walkthrough](deployment-demo-playbook.md) through GitHub Actions and a signed endpoint invocation. Keep the completed Studio execution, evaluation report, Actions run, and endpoint ready.
+- Save one successful and one malformed-request result for the walkthrough. Verify the [local lab](../README.md#run-the-local-lab) so students can reproduce the model and inference later.
+- Open the [architecture diagram](architecture/README.md), Studio execution, Model Registry package, GitHub Actions log, and Bedrock companion repo.
+- If presenting content screening, have the separate Bedrock stack's guardrail ID and published version ready. Rehearse both fixtures in the [screening lab](guardrails.md).
 
-## SageMaker teaching sequence
+## In class
 
-1. Show the training split and the fitted preprocessing inside the pipeline. The dataset contains 48 training and 16 test examples with the checked-in split. Ask what four test cases per class can tell you.
-2. Open the pipeline graph. Trace the training artifact, the held-out evaluation, and the billing recall gate. If you ran the optional stricter execution, show where it stopped.
-3. Show one pending package being blocked, then approve and promote it. Verify the model version by invoking the endpoint.
-4. Explain Model, EndpointConfig, and Endpoint using the deployed resources. Send a malformed case and inspect its container error.
-5. Run the [guardrails lab](guardrails.md). Show the candidate alarm and endpoint rollback. Then pre-screen two requests with Bedrock ApplyGuardrail and compare the outcomes. Ask what would trigger a quality rollback if latency stays healthy while real complaint classification worsens.
-6. Give the same complaint text to the existing Bedrock workflow. Compare a category score with generated analysis and compare a schema error with a guardrail intervention.
+1. Show the complaint and expected response. Explain what the fitted vectorizer and classifier contribute to the archive.
+2. Trace the trained archive through the Studio graph. Ask whether students would release a model that got 13 of 16 right overall and caught only 2 of 4 billing cases.
+3. Follow the exact package ARN through approval and GitHub Actions. Explain why production promotion has its own permissions, verification, and rollback policy. [Teaching note](mlops.md#why-separate-model-building-and-deployment) Explain the Model, EndpointConfig, and Endpoint, then invoke the live endpoint and verify `modelVersion`.
+4. Use the [rollback drill](model-registry-ci-cd.md#demonstrate-rollback) to show what happens when the next approved release breaches a latency alarm. Keep the completed drill run and baseline response ready to show.
+5. Run the [content screening lab](guardrails.md). Use the shared Bedrock guardrail to screen complaints before SageMaker inference, then show the same policy in the Bedrock companion's foundation model flow.
 
-## Fallback and cleanup
-
-If the pipeline is still running, inspect its active step and continue with the completed rehearsal execution and shared endpoint. Use local inference if the AWS endpoint is unavailable. The action CLI only needs Python's standard library, so participants without the ML dependencies can use the supplied example insight. Remove the teaching endpoint after its final exercise and verify deletion.
+Students follow the demonstration in class and can run the repo later. After the last invocation, follow the [cleanup guide](costing.md).

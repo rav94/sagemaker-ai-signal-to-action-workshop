@@ -14,6 +14,11 @@ Parameters:
   InstanceType:
     Type: String
     Default: ml.t2.medium
+  ExistingModelExecutionRoleArn:
+    Type: String
+    Default: ''
+    Description: Optional ModelExecutionRoleArn from the GitHub deployment IAM stack.
+    AllowedPattern: '(^$|arn:[a-z0-9-]+:iam::[0-9]{12}:role/[A-Za-z0-9+=,.@_/-]+)'
   EnableDeploymentGuardrails:
     Type: String
     AllowedValues: ['true', 'false']
@@ -22,11 +27,8 @@ Parameters:
     Type: String
     Default: ''
     Description: Model archive key used by the currently deployed release
-  RollbackLatencyThresholdUs:
-    Type: Number
-    MinValue: 1
-    Default: 1000000
 Conditions:
+  CreateModelExecutionRole: !Equals [!Ref ExistingModelExecutionRoleArn, '']
   GuardedRelease: !Equals [!Ref EnableDeploymentGuardrails, 'true']
   HasRollbackArtifact: !And
     - !Condition GuardedRelease
@@ -34,6 +36,7 @@ Conditions:
 Resources:
   ModelExecutionRole:
     Type: AWS::IAM::Role
+    Condition: CreateModelExecutionRole
     Properties:
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
@@ -96,7 +99,13 @@ Resources:
   Model:
     Type: AWS::SageMaker::Model
     Properties:
-      ExecutionRoleArn: !GetAtt ModelExecutionRole.Arn
+      ExecutionRoleArn: !If
+        - CreateModelExecutionRole
+        - !GetAtt ModelExecutionRole.Arn
+        - !Ref ExistingModelExecutionRoleArn
+      Tags:
+        - Key: WorkshopStack
+          Value: !Ref AWS::StackName
       EnableNetworkIsolation: true
       PrimaryContainer:
         Image: !Ref ImageUri
@@ -104,6 +113,9 @@ Resources:
   EndpointConfig:
     Type: AWS::SageMaker::EndpointConfig
     Properties:
+      Tags:
+        - Key: WorkshopStack
+          Value: !Ref AWS::StackName
       ProductionVariants:
         - VariantName: AllTraffic
           InitialInstanceCount: 1
@@ -129,7 +141,7 @@ Resources:
       Period: 60
       EvaluationPeriods: 1
       DatapointsToAlarm: 1
-      Threshold: !Ref RollbackLatencyThresholdUs
+      Threshold: 1
       ComparisonOperator: GreaterThanThreshold
       TreatMissingData: notBreaching
   Endpoint:

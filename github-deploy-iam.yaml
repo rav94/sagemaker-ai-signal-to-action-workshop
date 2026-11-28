@@ -1,0 +1,209 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: One-time GitHub OIDC access and SageMaker serving identity for the workshop
+Parameters:
+  GitHubOidcSubject:
+    Type: String
+    Description: Exact OIDC subject for the GitHub repository that runs the workflow from main.
+    AllowedPattern: 'repo:([A-Za-z0-9-]+/[A-Za-z0-9_.-]+|[A-Za-z0-9-]+@[0-9]+/[A-Za-z0-9_.-]+@[0-9]+):ref:refs/heads/main'
+    ConstraintDescription: Supply the exact GitHub repo subject for refs/heads/main.
+  WorkshopStack:
+    Type: String
+    Default: sagemaker-ai-signal-insight-action-workshop
+    AllowedPattern: '[A-Za-z][A-Za-z0-9-]{0,53}'
+  ArtifactBucket:
+    Type: String
+    Description: ArtifactBucket output of the workshop assets stack.
+    AllowedPattern: '[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]'
+  ImageRepositoryName:
+    Type: String
+    Description: Repository name portion of the ImageRepositoryUri output of the assets stack.
+    AllowedPattern: '[a-z0-9]+([._/-][a-z0-9]+)*'
+
+Resources:
+  ServingModelRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: sagemaker.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+              ArnLike:
+                aws:SourceArn: !Sub 'arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:*'
+      Policies:
+        - PolicyName: LoadWorkshopModel
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: s3:GetObject
+                Resource: !Sub 'arn:${AWS::Partition}:s3:::${ArtifactBucket}/training-output/*/model.tar.gz'
+              - Effect: Allow
+                Action: s3:ListBucket
+                Resource: !Sub 'arn:${AWS::Partition}:s3:::${ArtifactBucket}'
+              - Effect: Allow
+                Action: ecr:GetAuthorizationToken
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:BatchGetImage
+                  - ecr:GetDownloadUrlForLayer
+                Resource: !Sub 'arn:${AWS::Partition}:ecr:${AWS::Region}:${AWS::AccountId}:repository/${ImageRepositoryName}'
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                  - logs:DescribeLogStreams
+                Resource: !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/sagemaker/Endpoints/${WorkshopStack}:*'
+              - Effect: Allow
+                Action: cloudwatch:DescribeAlarms
+                Resource: !Sub 'arn:${AWS::Partition}:cloudwatch:${AWS::Region}:${AWS::AccountId}:alarm:${WorkshopStack}-candidate-model-latency'
+              - Effect: Allow
+                Action: cloudwatch:PutMetricData
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    cloudwatch:namespace:
+                      - AWS/SageMaker
+                      - /aws/sagemaker/Endpoints
+
+  GitHubDeployRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:oidc-provider/token.actions.githubusercontent.com'
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+                token.actions.githubusercontent.com:sub: !Ref GitHubOidcSubject
+      Policies:
+        - PolicyName: PromoteWorkshopModel
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: sagemaker:DescribeModelPackage
+                Resource: !Sub 'arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:model-package/${WorkshopStack}-registry/*'
+              - Effect: Allow
+                Action: cloudformation:DescribeStacks
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${WorkshopStack}-assets/*'
+                  - !Sub 'arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${WorkshopStack}/*'
+              - Effect: Allow
+                Action:
+                  - cloudformation:CreateChangeSet
+                  - cloudformation:DeleteChangeSet
+                  - cloudformation:DescribeChangeSet
+                  - cloudformation:ExecuteChangeSet
+                  - cloudformation:DescribeStackEvents
+                Resource: !Sub 'arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${WorkshopStack}/*'
+              - Effect: Allow
+                Action: iam:PassRole
+                Resource: !GetAtt ServingModelRole.Arn
+                Condition:
+                  StringEquals:
+                    iam:PassedToService: sagemaker.amazonaws.com
+              - Effect: Allow
+                Action:
+                  - sagemaker:CreateEndpoint
+                  - sagemaker:UpdateEndpoint
+                  - sagemaker:DeleteEndpoint
+                  - sagemaker:DescribeEndpoint
+                  - sagemaker:InvokeEndpoint
+                  - sagemaker:AddTags
+                  - sagemaker:DeleteTags
+                  - sagemaker:ListTags
+                Resource: !Sub 'arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:endpoint/${WorkshopStack}'
+              - Effect: Allow
+                Action:
+                  - sagemaker:CreateModel
+                  - sagemaker:CreateEndpointConfig
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:model/*'
+                  - !Sub 'arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:endpoint-config/*'
+                Condition:
+                  StringEquals:
+                    aws:RequestTag/WorkshopStack: !Ref WorkshopStack
+              - Effect: Allow
+                Action: sagemaker:AddTags
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:model/*'
+                  - !Sub 'arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:endpoint-config/*'
+                Condition:
+                  StringEquals:
+                    aws:RequestTag/WorkshopStack: !Ref WorkshopStack
+                    sagemaker:TaggingAction:
+                      - CreateModel
+                      - CreateEndpointConfig
+              - Effect: Allow
+                Action:
+                  - sagemaker:DescribeModel
+                  - sagemaker:DescribeEndpointConfig
+                  - sagemaker:ListTags
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:model/*'
+                  - !Sub 'arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:endpoint-config/*'
+              - Effect: Allow
+                Action:
+                  - sagemaker:DeleteModel
+                  - sagemaker:DeleteEndpointConfig
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:model/*'
+                  - !Sub 'arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:endpoint-config/*'
+                Condition:
+                  StringEquals:
+                    aws:ResourceTag/WorkshopStack: !Ref WorkshopStack
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:DeleteLogGroup
+                  - logs:PutRetentionPolicy
+                  - logs:TagResource
+                  - logs:UntagResource
+                  - logs:GetDataProtectionPolicy
+                  - logs:ListTagsForResource
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/sagemaker/Endpoints/${WorkshopStack}'
+                  - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/sagemaker/Endpoints/${WorkshopStack}:*'
+              - Effect: Allow
+                Action:
+                  - logs:DescribeIndexPolicies
+                  - logs:DescribeLogGroups
+                  - logs:DescribeResourcePolicies
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    aws:RequestedRegion: !Ref AWS::Region
+              - Effect: Allow
+                Action:
+                  - cloudwatch:PutMetricAlarm
+                  - cloudwatch:DeleteAlarms
+                  - cloudwatch:DescribeAlarms
+                  - cloudwatch:DescribeAlarmHistory
+                  - cloudwatch:ListTagsForResource
+                  - cloudwatch:TagResource
+                  - cloudwatch:UntagResource
+                Resource: !Sub 'arn:${AWS::Partition}:cloudwatch:${AWS::Region}:${AWS::AccountId}:alarm:${WorkshopStack}-candidate-model-latency'
+
+Outputs:
+  GitHubDeployRoleArn:
+    Value: !GetAtt GitHubDeployRole.Arn
+  ModelExecutionRoleArn:
+    Value: !GetAtt ServingModelRole.Arn
+  WorkshopAccountId:
+    Value: !Ref AWS::AccountId
+  WorkshopRegion:
+    Value: !Ref AWS::Region
+  WorkshopStack:
+    Value: !Ref WorkshopStack

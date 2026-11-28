@@ -24,8 +24,8 @@ done
 docker run --rm --platform linux/amd64 \
   --mount "type=bind,source=$PWD/data,target=/opt/ml/input/data/train,readonly" \
   --mount "type=bind,source=$scratch/model,target=/opt/ml/model" \
-  --env WORKSHOP_MODEL_VERSION=ci-smoke "$training_image" train
-
+  --env WORKSHOP_MODEL_VERSION=ci-smoke --env WORKSHOP_EVALUATE_SEPARATELY=true \
+  "$training_image" train
 
 mkdir -p "$scratch/archive" "$scratch/evaluation"
 tar -czf "$scratch/archive/model.tar.gz" -C "$scratch/model" \

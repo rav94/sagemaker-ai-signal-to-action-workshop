@@ -4,7 +4,7 @@ Use the existing synthetic fixtures. Your instructor will share the endpoint nam
 
 ## 1. Trace the training artifact
 
-Follow the [native pipeline lab](sagemaker-pipeline.md) using the instructor’s execution ARN. Find the training artifact, evaluation report, and approved model package. Match the package’s release version to the endpoint response. If your role only allows invocation, follow along as the instructor runs the inspection commands.
+Follow the [Studio walkthrough](deployment-demo-playbook.md#inspect-the-run-in-studio) using the instructor’s execution ARN. Find the training artifact, evaluation report, and approved model package. Match the package’s release version to the endpoint response. If your role only allows invocation, follow along as the instructor runs the inspection commands.
 
 ## 2. Get an insight
 
@@ -42,8 +42,10 @@ aws sagemaker-runtime invoke-endpoint \
 
 Expect the command to fail with `ModelError`. The container returned HTTP 400. The AWS service wraps that as HTTP 424 and includes the original status in the error details. For the local lab, send the same fixture with `curl -i` to see the container status directly. [AWS InvokeEndpoint errors](https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_runtime_InvokeEndpoint.html#API_runtime_InvokeEndpoint_Errors)
 
-## 5. Inspect the safeguards
+## Observe content screening
 
-Follow the [guardrails lab](guardrails.md) after verifying the baseline endpoint. Compare the endpoint configuration and model version before and after the instructor's guarded rollout. Then screen a normal complaint and a synthetic email complaint. Confirm that the normal case can return an insight and the intervention stops before inference. If your role lacks content-check or deployment privileges, use the instructor's captured run.
+In the instructor's [content screening lab](guardrails.md), compare an ordinary billing complaint with a second billing complaint that includes a synthetic email address. Watch for the inference JSON on the cleared request and the caller's intervention message when it skips the endpoint. Running the screening lab yourself requires access to the shared Bedrock guardrail and the SageMaker endpoint.
 
-If a shared endpoint is unavailable, use the local serving process or run the action exercise on `events/insight-example.json`. That example is a supplied fixture.
+## Observe the rollout
+
+During the instructor's [rollback drill](model-registry-ci-cd.md#demonstrate-rollback), use a fresh response after the alarm to check that the endpoint serves the baseline `modelVersion` again.

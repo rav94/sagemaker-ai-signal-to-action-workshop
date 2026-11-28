@@ -1,58 +1,53 @@
 # Workshop architecture
 
-## Main workshop path
+## From training to a verified release
 
-The [native SageMaker Pipeline](../sagemaker-pipeline.md) owns training, evaluation, and conditional registration. The approval and [GitHub deployment](../model-registry-ci-cd.md) promote the exact approved model archive and image digest. The diagram below illustrates the artifact handoff used by both paths.
-
-## Managed training to real-time deployment
-
-![SageMaker managed training and deployment overview](training-to-endpoint.png)
+![Native SageMaker Pipeline trains and evaluates, branches on billing recall, registers a passing package, and hands off to approval and deployment](training-to-endpoint.png)
 
 [Editable Draw.io source](serving.drawio) · [Open the overview PNG](training-to-endpoint.png)
 
-The deployment script builds two Linux AMD64 images from the same Dockerfile. Its `training` target packages `src/train.py` and its `serving` target packages `src/serve.py`. They share a Python base and pinned packages. The managed path publishes tags `train-<release>` and `serve-<release>` to the workshop ECR repository. The training job and serving stack reference the respective image digests. Both enable network isolation.
+| Stage | Handoff |
+|---|---|
+| **Build and launch** | GitHub CI checks the training, evaluation, and serving contracts on the runner. The instructor's AWS launcher provisions the Studio workspace and publishes the checksum-addressed CSV, pipeline definition, and two Linux AMD64 Docker image targets. The pipeline and package use image digests. |
+| **Train** | `TrainModel` fits the classifier and writes the versioned `model.tar.gz` to S3. |
+| **Evaluate and gate** | `EvaluateModel` reads that archive and scores the held-out rows. `CheckBillingRecall` reads the Processing job's `evaluation.json`. A pass registers a package. A miss fails the execution before registration. |
+| **Register and approve** | The versioned Registry package starts as `PendingManualApproval` and references the exact archive, serving image, and report. The instructor reviews the report and approves the package. |
+| **Promote and verify** | The manually dispatched GitHub workflow requires a package that is `Approved` and `Completed`. CloudFormation applies the Model, EndpointConfig, and Endpoint. A signed invocation checks the returned `modelVersion`. |
 
-| Stage | Inputs | Output |
-|---|---|---|
-| **Managed training** | ECR training image and a checksum-addressed CSV in S3. The `train` channel provides the CSV in File mode. | Evaluation output in CloudWatch and a job-specific S3 archive containing `complaint_classifier.joblib` and `model-version.txt`. |
-| **Artifact handoff** | The completed job's `ModelArtifacts.S3ModelArtifacts` value. | The deployment script uses that S3 object as the SageMaker Model's `PrimaryContainer.ModelDataUrl`. |
-| **Real-time deployment** | ECR serving image and the selected S3 model archive. | A SageMaker Model, EndpointConfig, and IAM-authenticated Endpoint. |
-| **Local fallback** | The same dataset and training script run on a laptop. | The packaging script writes the same archive layout. Deployment uploads it to a checksum-addressed S3 key and uses the same serving stack. |
-
-A SageMaker training job runs to completion and releases its compute. The provisioned real-time endpoint remains available for inference until you remove it. The [managed training lab](../cloud-training.md) shows how to verify the artifact URI on both sides of the handoff. [AWS training output](https://docs.aws.amazon.com/sagemaker/latest/dg/your-algorithms-training-algo-output.html) · [AWS real-time deployment](https://docs.aws.amazon.com/sagemaker/latest/dg/realtime-endpoints-deploy-models.html)
+The [pipeline lab](../deployment-demo-playbook.md#inspect-the-run-in-studio) walks through the execution graph. The [registry and CI/CD lab](../model-registry-ci-cd.md) picks up at the versioned package ARN. Training and Processing release their compute when each job ends. The real-time endpoint remains provisioned until teardown. [AWS pipeline step data](https://docs.aws.amazon.com/sagemaker/latest/dg/build-and-manage-propertyfile.html) · [AWS model approval](https://docs.aws.amazon.com/sagemaker/latest/dg/model-registry-approve.html)
 
 ## Inference request
 
-![Signal, insight, and action request flow](inference-request.png)
+![Local HTTP or signed AWS inference, followed by a versioned prediction and simulated routing](inference-request.png)
 
 [Open the request flow PNG](inference-request.png)
 
-The caller signs an `InvokeEndpoint` request to the SageMaker Runtime API. SageMaker sends it to `POST /invocations` in the serving container on port `8080`. The container loads the fitted pipeline from `/opt/ml/model` at startup. The response contains a category, score, and model version. The caller can then use the local action CLI to simulate routing or human review. The serving contract is the same whether the artifact was trained locally or on SageMaker. [Inference contract](../../specs/02-inference-contract.md) · [AWS InvokeEndpoint API](https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_runtime_InvokeEndpoint.html)
+In the [local lab](../../README.md#run-the-local-lab), `curl` calls `POST /invocations` on the local Python server, which loads the fitted files from `artifacts/`. For the AWS release, the caller signs an `InvokeEndpoint` request. SageMaker forwards it to `POST /invocations` on port `8080`. The serving container loads the fitted vectorizer and classifier from `/opt/ml/model`. The prediction includes the category, score, and release version. The local action CLI uses that response to simulate routing or human review. [Inference contract](../../specs/02-inference-contract.md) · [AWS InvokeEndpoint API](https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_runtime_InvokeEndpoint.html)
 
-## Registered release path
+## Content screening before inference
 
-The optional [Registry lab](../model-registry-ci-cd.md) registers the completed archive and serving image digest before serving deployment. A manual GitHub Actions run or the terminal helper reads the approved package and promotes its exact assets. The registry stack owns the Model Package Group. See the [release contract](../../specs/07-registry-release.md).
+![Caller checks the complaint with a published Bedrock guardrail before invoking SageMaker](bedrock-content-screening.png)
 
-## Release and content safeguards
+The [screening lab](../guardrails.md) uses the separately deployed Bedrock workshop guardrail. The caller proceeds to SageMaker on `NONE` and stops on an intervention or failed check.
 
-![Blue/green rollout and automatic rollback for a SageMaker endpoint](sagemaker-guarded-update.png)
+## Blue/green rollout and rollback
 
-The optional [guarded update](../guardrails.md#1-protect-a-sagemaker-endpoint-update) attaches a candidate model-latency alarm to SageMaker's blue/green deployment policy. The alarm watches the new endpoint configuration and can trigger rollback to the prior fleet.
+![Blue/green endpoint rollout with candidate traffic, latency monitoring, and verified baseline rollback](sagemaker-guarded-update.png)
 
-![Bedrock ApplyGuardrail decision before SageMaker inference](bedrock-content-screening.png)
-
-The [guarded caller](../guardrails.md#2-use-bedrock-applyguardrail-in-front-of-sagemaker) calls Bedrock ApplyGuardrail before invoking the endpoint. It forwards the complaint to SageMaker when the published guardrail returns `NONE`. In this lab, every intervention or check failure stops the request. The [guardrails contract](../../specs/06-guardrails.md) describes the status codes and the evidence to capture.
+The [rollback drill](../model-registry-ci-cd.md#demonstrate-rollback) uses a second approved package on the same endpoint. SageMaker shifts all traffic to the candidate and keeps the baseline fleet available during monitoring. A candidate latency alarm returns traffic to the baseline. The workflow verifies the alarm and the restored configuration and model version.
 
 ## Stack ownership and identities
 
 | Where | What it owns or can do |
 |---|---|
-| [Assets stack](../../bootstrap.yaml) | Private S3 artifact bucket, immutable-tag ECR repository, and SageMaker training execution role. |
-| [Serving stack](../../template.yaml) | SageMaker serving execution role, endpoint log group with seven-day retention, Model, EndpointConfig, and Endpoint, plus the candidate alarm when the guarded update is enabled. |
-| [Deployment script](../../scripts/deploy.sh) and [training helper](../../scripts/train-cloud.sh) | Build and publish the images, submit and wait for the training job, and pass its model archive to the serving stack. The training job is submitted through the SageMaker API. |
-| Instructor/deployer identity | Publishes assets, deploys stacks, submits and inspects jobs, and passes the SageMaker execution roles. |
-| Training execution role | SageMaker uses it to read the training data and image, write training output to S3, and publish training logs and metrics. |
-| Serving execution role | SageMaker uses it to read the selected archive and serving image and publish serving logs and metrics. |
-| Participant identity | Calls `sagemaker:InvokeEndpoint` on the shared endpoint. An instructor can run the architecture inspection commands for participants with invoke-only access. |
+| [Assets stack](../../bootstrap.yaml) | S3 artifact bucket, immutable-tag ECR repository, and job role for training and evaluation. |
+| [Pipeline stack](../../pipeline.yaml) | SageMaker Pipeline and orchestration role. The role starts and inspects training and Processing jobs, passes the job role, reads step outputs, and registers model packages. |
+| [Studio stack](../../studio.yaml) | Dedicated inspection domain, instructor profile, execution role, VPC, and subnets. The instructor can open the pipeline graph, read evaluation reports from the workshop assets bucket, and approve versions in the workshop Registry group. |
+| [Registry stack](../../registry.yaml) | Workshop Model Package Group. Pipeline executions create individual package versions. |
+| [Account IAM](../model-registry-ci-cd.md#set-up-aws-access-once) | The setup script creates or reuses the shared GitHub OIDC provider with audience `sts.amazonaws.com`. The provider's lifecycle is independent of the workshop stacks. |
+| [GitHub deployment IAM stack](../../github-deploy-iam.yaml) | Trusts the exact GitHub repository subject on `main` through the account OIDC provider. Creates the GitHub deployment role and the execution role it can pass to SageMaker. |
+| [Serving stack](../../template.yaml) | Model, EndpointConfig, Endpoint, log group, and the candidate alarm during the drill. GitHub supplies the pre-provisioned SageMaker execution role. An instructor can supply a different role or use the stack-managed role when deploying directly. |
+| Instructor and GitHub identities | The instructor launches the pipeline and reviews and approves packages. The GitHub deployment role reads packages and promotes approved releases. |
+| Participant identity | Invokes the shared endpoint. The instructor can display execution details for participants with invoke-only access. |
 
-See [the deployment playbook](../deployment-demo-playbook.md) for launch order, [costing](../costing.md) for teardown, and [MLOps design](../mlops.md) for the production release exercise.
+[Deployment playbook](../deployment-demo-playbook.md) · [Cost and cleanup](../costing.md) · [Production MLOps](../mlops.md)

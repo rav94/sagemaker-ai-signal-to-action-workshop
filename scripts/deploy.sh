@@ -2,68 +2,49 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-usage="Usage: bash scripts/deploy.sh MODEL_VERSION [--cloud-train] [--register-only] | MODEL_VERSION --pipeline"
-version="${1:?${usage}}"
-shift
-training_mode=local
-register_only=false
-pipeline_mode=false
-for option in "$@"; do
-  case "$option" in
-    --cloud-train) training_mode=cloud ;;
-    --register-only) register_only=true ;;
-    --pipeline) pipeline_mode=true; training_mode=cloud ;;
-    *) echo "$usage" >&2; exit 2 ;;
-  esac
-done
+if [[ "$#" != 1 || ! "$1" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,120}$ ]]; then
+  echo "Usage: bash scripts/deploy.sh RELEASE_VERSION" >&2
+  exit 2
+fi
+version="$1"
 : "${AWS_PROFILE:?Set AWS_PROFILE to the teaching sandbox profile}"
 : "${AWS_REGION:?Set AWS_REGION to the teaching sandbox Region}"
 : "${WORKSHOP_ACCOUNT_ID:?Set WORKSHOP_ACCOUNT_ID to the approved teaching account ID}"
 export AWS_PAGER=""
 
 stack="${WORKSHOP_STACK:-sagemaker-ai-signal-insight-action-workshop}"
-storage_stack="${stack}-assets"
-registry_stack="${stack}-registry"
-instance_type="${WORKSHOP_INSTANCE_TYPE:-ml.t2.medium}"
-
-if [[ ! "$version" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,120}$ ]]; then
-  echo "Use a release version of at most 121 letters, digits, dots, underscores or hyphens, starting with a letter or digit." >&2
+if [[ ! "$stack" =~ ^[A-Za-z][A-Za-z0-9-]{0,53}$ ]]; then
+  echo "Choose a CloudFormation base stack name of at most 54 characters." >&2
   exit 2
 fi
-
-if [[ "$pipeline_mode" == true && "$register_only" == true ]]; then
-  echo "--pipeline already registers candidates that pass the evaluation gate." >&2
-  exit 2
-fi
-if [[ ( "$register_only" == true || "$pipeline_mode" == true ) && "${#registry_stack}" -gt 63 ]]; then
-  echo "Choose WORKSHOP_STACK of at most 54 characters for the registry path." >&2
-  exit 2
-fi
+assets_stack="$stack-assets"
+registry_stack="$stack-registry"
+pipeline_stack="$stack-pipeline"
+studio_stack="$stack-studio"
 
 account=$(aws sts get-caller-identity --query Account --output text)
 if [[ "$account" != "$WORKSHOP_ACCOUNT_ID" ]]; then
   echo "AWS caller account does not match the approved teaching account." >&2
   exit 2
 fi
-
 docker info >/dev/null
 
-if [[ "$training_mode" == local ]]; then
-  bash scripts/package-model.sh "$version"
-fi
+# Provision the artifact bucket before granting Studio access to evaluation reports.
+aws cloudformation deploy --template-file bootstrap.yaml --stack-name "$assets_stack" \
+  --capabilities CAPABILITY_IAM --no-fail-on-empty-changeset
 
-aws cloudformation deploy --template-file bootstrap.yaml \
-  --stack-name "$storage_stack" --capabilities CAPABILITY_IAM --no-fail-on-empty-changeset
-
-stack_output() {
-  aws cloudformation describe-stacks --stack-name "$storage_stack" \
+asset_output() {
+  aws cloudformation describe-stacks --stack-name "$assets_stack" \
     --query "Stacks[0].Outputs[?OutputKey=='$1'].OutputValue | [0]" --output text
 }
 
-bucket=$(stack_output ArtifactBucket)
-repository_uri=$(stack_output ImageRepositoryUri)
+bucket=$(asset_output ArtifactBucket)
+repository_uri=$(asset_output ImageRepositoryUri)
 repository_name="${repository_uri#*/}"
-
+job_role=$(asset_output TrainingRoleArn)
+aws cloudformation deploy --template-file studio.yaml --stack-name "$studio_stack" \
+  --capabilities CAPABILITY_IAM --no-fail-on-empty-changeset \
+  --parameter-overrides "WorkshopStackName=$stack" "ArtifactBucket=$bucket"
 aws ecr get-login-password | docker login --username AWS --password-stdin "${repository_uri%%/*}"
 
 publish_image() {
@@ -75,42 +56,32 @@ publish_image() {
     --image-ids "imageTag=$tag" --query 'imageDetails[0].imageDigest' --output text) || return
   printf '%s@%s\n' "$repository_uri" "$digest"
 }
+training_image=$(publish_image training "train-$version")
+serving_image=$(publish_image serving "serve-$version")
 
-image_uri=$(publish_image serving "serve-$version")
-if [[ "$training_mode" == cloud ]]; then
-  training_image_uri=$(publish_image training "train-$version")
-  training_role_arn=$(stack_output TrainingRoleArn)
-  if [[ "$pipeline_mode" == true ]]; then
-    bash scripts/start-pipeline.sh "$stack" "$version" "$bucket" "$repository_name" \
-      "$training_image_uri" "$image_uri" "$training_role_arn" "$instance_type"
-    exit 0
-  fi
-  artifact_uri=$(bash scripts/train-cloud.sh "$version" "$stack" "$bucket" \
-    "$training_image_uri" "$training_role_arn")
-  if [[ "$artifact_uri" != "s3://$bucket/training-output/"* ]]; then
-    echo "Unexpected training artifact location: $artifact_uri" >&2
-    exit 1
-  fi
-  artifact_key="${artifact_uri#s3://$bucket/}"
-else
-  archive="${WORKSHOP_MODEL_DIR:-artifacts}/model.tar.gz"
-  artifact_digest=$(shasum -a 256 "$archive" | cut -d ' ' -f 1)
-  artifact_key="models/$version/$artifact_digest/model.tar.gz"
-  aws s3 cp "$archive" "s3://$bucket/$artifact_key"
-fi
+# Publish the immutable inputs and install the native SageMaker graph.
+definition=$(mktemp "${TMPDIR:-/tmp}/workshop-pipeline.XXXXXX")
+trap 'rm -f -- "$definition"' EXIT
+data_digest=$(shasum -a 256 data/complaints.csv | cut -d ' ' -f 1)
+data_uri="s3://$bucket/training-data/$data_digest/complaints.csv"
+python3 scripts/pipeline-definition.py "$bucket" "$data_uri" "$training_image" \
+  "$serving_image" "$job_role" "$registry_stack" "$version" \
+  "${WORKSHOP_TRAINING_INSTANCE_TYPE:-ml.t3.large}" \
+  "${WORKSHOP_EVALUATION_INSTANCE_TYPE:-ml.t3.medium}" \
+  "${WORKSHOP_INSTANCE_TYPE:-ml.t2.medium}" > "$definition"
+definition_digest=$(shasum -a 256 "$definition" | cut -d ' ' -f 1)
+definition_key="pipelines/$version/$definition_digest.json"
+aws s3 cp data/complaints.csv "$data_uri"
+aws s3 cp "$definition" "s3://$bucket/$definition_key"
+aws cloudformation deploy --template-file registry.yaml --stack-name "$registry_stack" \
+  --no-fail-on-empty-changeset
+aws cloudformation deploy --template-file pipeline.yaml --stack-name "$pipeline_stack" \
+  --capabilities CAPABILITY_IAM --no-fail-on-empty-changeset \
+  --parameter-overrides "ArtifactBucket=$bucket" "DefinitionKey=$definition_key" \
+  "JobRoleArn=$job_role" "PackageGroup=$registry_stack" "ImageRepositoryName=$repository_name"
 
-printf 'Published image: %s\nPublished model: s3://%s/%s\n' "$image_uri" "$bucket" "$artifact_key"
-
-if [[ "$register_only" == true ]]; then
-  package_arn=$(bash scripts/register-model.sh "$registry_stack" "$version" \
-    "$image_uri" "s3://$bucket/$artifact_key" "$instance_type")
-  if [[ "$package_arn" != arn:*:sagemaker:"$AWS_REGION":"$account":model-package/"$registry_stack/"* ]]; then
-    echo "Unexpected registered model package ARN: $package_arn" >&2
-    exit 1
-  fi
-  printf 'Model package ARN: %s\nApproval: PendingManualApproval\n' "$package_arn"
-  exit 0
-fi
-
-source scripts/lib/deploy-endpoint.sh
-deploy_workshop_endpoint "$stack" "$bucket" "$artifact_key" "$image_uri" "$repository_name" "$instance_type"
+printf 'Studio domain: %s\nStudio profile: workshop-instructor\nPipeline: %s\n' \
+  "$studio_stack" "$pipeline_stack"
+aws sagemaker start-pipeline-execution --pipeline-name "$pipeline_stack" \
+  --pipeline-execution-description "Workshop candidate $version" \
+  --query PipelineExecutionArn --output text

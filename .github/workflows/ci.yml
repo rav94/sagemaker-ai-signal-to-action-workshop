@@ -20,8 +20,8 @@ jobs:
       - name: Check shell scripts
         shell: bash
         run: |
-          for script in scripts/*.sh scripts/lib/*.sh; do
+          for script in scripts/*.sh; do
             bash -n "$script"
           done
-      - name: Train locally and test the serving container
+      - name: Test training, evaluation, and serving containers
         run: bash scripts/smoke-containers.sh

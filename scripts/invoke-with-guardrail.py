@@ -13,15 +13,17 @@ from tempfile import TemporaryDirectory
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("complaint", type=Path, help="JSON file containing a message")
-    parser.add_argument("--endpoint", default=os.environ.get("WORKSHOP_STACK"))
+    parser.add_argument(
+        "--endpoint",
+        default=os.environ.get("WORKSHOP_STACK") or "sagemaker-ai-signal-insight-action-workshop",
+        help="SageMaker endpoint name (defaults to WORKSHOP_STACK or the workshop endpoint)",
+    )
     args = parser.parse_args()
 
-    guardrail_id = os.environ.get("BEDROCK_GUARDRAIL_ID", "")
-    guardrail_version = os.environ.get("BEDROCK_GUARDRAIL_VERSION", "")
+    guardrail_id = os.environ.get("BEDROCK_GUARDRAIL_ID", "").strip()
+    guardrail_version = os.environ.get("BEDROCK_GUARDRAIL_VERSION", "").strip()
     guardrail_region = os.environ.get("BEDROCK_GUARDRAIL_REGION")
-    if not args.endpoint:
-        parser.error("provide --endpoint or set WORKSHOP_STACK")
-    if not guardrail_id or not re.fullmatch(r"[1-9][0-9]{0,7}", guardrail_version):
+    if guardrail_id in {"", "None"} or not re.fullmatch(r"[1-9][0-9]{0,7}", guardrail_version):
         parser.error("set BEDROCK_GUARDRAIL_ID and a numbered BEDROCK_GUARDRAIL_VERSION")
 
     try:

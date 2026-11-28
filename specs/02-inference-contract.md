@@ -13,7 +13,7 @@ The container listens on port `8080`. `GET /ping` returns `{"status":"ok"}` with
 A successful response returns the predicted category, its top model score, and the release version. Valid categories are `billing`, `delivery`, `service`, and `technical`. The score lies in [0, 1] and is uncalibrated.
 
 ```json
-{"category":"billing","score":0.35864,"modelVersion":"phase1-cloud-v1"}
+{"category":"billing","score":0.35864,"modelVersion":"phase1-pipeline-v1"}
 ```
 
 | Condition | Container response |
@@ -23,9 +23,7 @@ A successful response returns the predicted category, its top model score, and t
 | Request body read timeout | HTTP 408 |
 | Unknown GET or POST route | HTTP 404 |
 
-In AWS, the caller uses the IAM-authenticated `InvokeEndpoint` API. SageMaker Runtime exposes a container 4xx or 5xx as `ModelError` with service HTTP 424 and the container's `OriginalStatusCode`. The same contract applies to artifacts produced locally and by the [managed training job](05-managed-training.md). [AWS container contract](https://docs.aws.amazon.com/sagemaker/latest/dg/your-algorithms-inference-code.html) · [InvokeEndpoint errors](https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_runtime_InvokeEndpoint.html#API_runtime_InvokeEndpoint_Errors)
-
-The [guarded caller](06-guardrails.md#bedrock-content-check-before-inference) optionally evaluates the input before it reaches this API. An intervention stops the request at that caller.
+In AWS, the caller uses the IAM-authenticated `InvokeEndpoint` API. SageMaker Runtime exposes a container 4xx or 5xx as `ModelError` with service HTTP 424 and the container's `OriginalStatusCode`. The same contract applies to local artifacts and [registered releases](07-registry-release.md). The promotion smoke test compares the response's `modelVersion` with the approved package's `ReleaseVersion`. [AWS container contract](https://docs.aws.amazon.com/sagemaker/latest/dg/your-algorithms-inference-code.html) · [InvokeEndpoint errors](https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_runtime_InvokeEndpoint.html#API_runtime_InvokeEndpoint_Errors)
 
 ## Local routing policy
 

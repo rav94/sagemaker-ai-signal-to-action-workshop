@@ -1,0 +1,154 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Dedicated SageMaker Studio workspace for inspecting workshop releases
+Parameters:
+  WorkshopStackName:
+    Type: String
+    Default: sagemaker-ai-signal-insight-action-workshop
+    AllowedPattern: '[A-Za-z][A-Za-z0-9-]{0,53}'
+    Description: Base stack name used by the workshop launcher
+
+  ArtifactBucket:
+    Type: String
+    AllowedPattern: '[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]'
+    Description: Bucket holding the workshop pipeline evaluation reports
+
+Resources:
+  StudioVpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.64.0.0/24
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+  StudioSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref StudioVpc
+      CidrBlock: 10.64.0.0/26
+      AvailabilityZone: !Select [0, !GetAZs '']
+  StudioSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref StudioVpc
+      CidrBlock: 10.64.0.64/26
+      AvailabilityZone: !Select [1, !GetAZs '']
+
+  StudioRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: sagemaker.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+              ArnLike:
+                aws:SourceArn: !Sub 'arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:*'
+      Policies:
+        - PolicyName: InspectWorkshopReleases
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sagemaker:ListApps
+                  - sagemaker:ListSpaces
+                  - sagemaker:ListPipelines
+                  - sagemaker:ListModelPackageGroups
+                  - sagemaker:ListModelPackages
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - sagemaker:DescribePipeline
+                  - sagemaker:ListPipelineExecutions
+                  - sagemaker:ListPipelineVersions
+                Resource: !Sub 'arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:pipeline/${WorkshopStackName}-pipeline'
+              - Effect: Allow
+                Action:
+                  - sagemaker:DescribePipelineExecution
+                  - sagemaker:DescribePipelineDefinitionForExecution
+                  - sagemaker:ListPipelineExecutionSteps
+                  - sagemaker:ListPipelineParametersForExecution
+                Resource: !Sub 'arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:pipeline/${WorkshopStackName}-pipeline/execution/*'
+              - Effect: Allow
+                Action: sagemaker:DescribeModelPackageGroup
+                Resource: !Sub 'arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:model-package-group/${WorkshopStackName}-registry'
+              - Effect: Allow
+                Action: sagemaker:DescribeModelPackage
+                Resource: !Sub 'arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:model-package/${WorkshopStackName}-registry/*'
+              - Effect: Allow
+                Action: sagemaker:DescribeTrainingJob
+                Resource: !Sub 'arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:training-job/*'
+              - Effect: Allow
+                Action: sagemaker:DescribeProcessingJob
+                Resource: !Sub 'arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:processing-job/*'
+              - Effect: Allow
+                Action:
+                  - sagemaker:DescribeDomain
+                  - sagemaker:DescribeUserProfile
+                  - sagemaker:DescribeApp
+                  - sagemaker:DescribeSpace
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:domain/*'
+                  - !Sub 'arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:user-profile/*'
+                  - !Sub 'arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:app/*'
+                  - !Sub 'arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:space/*'
+
+  StudioDomain:
+    Type: AWS::SageMaker::Domain
+    Properties:
+      DomainName: !Sub '${WorkshopStackName}-studio'
+      AuthMode: IAM
+      AppNetworkAccessType: PublicInternetOnly
+      VpcId: !Ref StudioVpc
+      SubnetIds:
+        - !Ref StudioSubnetA
+        - !Ref StudioSubnetB
+      HomeEfsFileSystemCreation: Disabled
+      DefaultUserSettings:
+        ExecutionRole: !GetAtt StudioRole.Arn
+        StudioWebPortal: ENABLED
+        DefaultLandingUri: 'studio::'
+  InstructorProfile:
+    Type: AWS::SageMaker::UserProfile
+    Properties:
+      DomainId: !GetAtt StudioDomain.DomainId
+      UserProfileName: workshop-instructor
+
+  StudioPortalAccess:
+    Type: AWS::IAM::RolePolicy
+    Properties:
+      RoleName: !Ref StudioRole
+      PolicyName: WorkshopStudioPortalAccess
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action: sagemaker:Search
+            Resource: '*'
+            Condition:
+              StringEquals:
+                aws:RequestedRegion: !Ref AWS::Region
+          - Effect: Allow
+            Action: sagemaker:CreatePresignedDomainUrl
+            Resource: !GetAtt InstructorProfile.UserProfileArn
+          - Effect: Allow
+            Action: s3:GetObject
+            Resource: !Sub 'arn:${AWS::Partition}:s3:::${ArtifactBucket}/evaluation-output/*/evaluation.json'
+          - Effect: Allow
+            Action: sagemaker:UpdateModelPackage
+            Resource: !Sub 'arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:model-package/${WorkshopStackName}-registry/*'
+            Condition:
+              StringEquals:
+                sagemaker:ModelApprovalStatus: Approved
+
+Outputs:
+  DomainId:
+    Value: !GetAtt StudioDomain.DomainId
+  StudioProfileName:
+    Value: workshop-instructor
+  StudioRoleArn:
+    Value: !GetAtt StudioRole.Arn
